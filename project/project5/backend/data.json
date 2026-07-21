@@ -1,0 +1,145 @@
+{
+  "name": "智慧园区 · 科技城",
+  "buildings": [
+    {
+      "id": "b1",
+      "name": "A栋 · 研发中心",
+      "x": 100,
+      "y": 80,
+      "width": 160,
+      "height": 100,
+      "color": "#4A90D9",
+      "sensors": [
+        { "id": "s1", "name": "温度传感器", "value": "24.5", "unit": "°C", "status": "normal" },
+        { "id": "s2", "name": "湿度传感器", "value": "62", "unit": "%", "status": "normal" },
+        { "id": "s3", "name": "PM2.5", "value": "35", "unit": "μg/m³", "status": "warning" }
+      ],
+      "points": [
+        { "id": "p1", "name": "入口门禁", "x": 80, "y": 50, "sensors": [
+          { "id": "sp1", "name": "门磁状态", "value": "关闭", "unit": "", "status": "normal" },
+          { "id": "sp2", "name": "人流量", "value": "128", "unit": "人/时", "status": "normal" }
+        ]},
+        { "id": "p2", "name": "一楼大厅", "x": 200, "y": 50, "sensors": [
+          { "id": "sp3", "name": "光照强度", "value": "320", "unit": "lux", "status": "normal" },
+          { "id": "sp4", "name": "二氧化碳", "value": "450", "unit": "ppm", "status": "normal" }
+        ]},
+        { "id": "p3", "name": "机房", "x": 140, "y": 120, "sensors": [
+          { "id": "sp5", "name": "温度", "value": "22.1", "unit": "°C", "status": "normal" },
+          { "id": "sp6", "name": "湿度", "value": "45", "unit": "%", "status": "normal" },
+          { "id": "sp7", "name": "UPS电压", "value": "220", "unit": "V", "status": "normal" }
+        ]}
+      ]
+    },
+    {
+      "id": "b2",
+      "name": "B栋 · 生产中心",
+      "x": 320,
+      "y": 80,
+      "width": 160,
+      "height": 100,
+      "color": "#E67E22",
+      "sensors": [
+        { "id": "s4", "name": "温度传感器", "value": "26.8", "unit": "°C", "status": "warning" },
+        { "id": "s5", "name": "噪音传感器", "value": "68", "unit": "dB", "status": "normal" },
+        { "id": "s6", "name": "振动传感器", "value": "0.3", "unit": "mm/s", "status": "normal" }
+      ],
+      "points": [
+        { "id": "p4", "name": "生产线A", "x": 80, "y": 40, "sensors": [
+          { "id": "sp8", "name": "设备转速", "value": "1500", "unit": "rpm", "status": "normal" },
+          { "id": "sp9", "name": "运行时长", "value": "12800", "unit": "h", "status": "normal" }
+        ]},
+        { "id": "p5", "name": "生产线B", "x": 80, "y": 100, "sensors": [
+          { "id": "sp10", "name": "设备转速", "value": "1200", "unit": "rpm", "status": "normal" },
+          { "id": "sp11", "name": "运行时长", "value": "9600", "unit": "h", "status": "normal" }
+        ]},
+        { "id": "p6", "name": "物料仓库", "x": 200, "y": 70, "sensors": [
+          { "id": "sp12", "name": "库存量", "value": "85", "unit": "%", "status": "normal" },
+          { "id": "sp13", "name": "温湿度", "value": "22/55", "unit": "°C/%", "status": "normal" }
+        ]}
+      ]
+    },
+    {
+      "id": "b3",
+      "name": "C栋 · 行政楼",
+      "x": 540,
+      "y": 80,
+      "width": 140,
+      "height": 100,
+      "color": "#27AE60",
+      "sensors": [
+        { "id": "s7", "name": "温度传感器", "value": "23.2", "unit": "°C", "status": "normal" },
+        { "id": "s8", "name": "光照传感器", "value": "450", "unit": "lux", "status": "normal" },
+        { "id": "s9", "name": "空气质量", "value": "优", "unit": "", "status": "normal" }
+      ],
+      "points": [
+        { "id": "p7", "name": "会议室A", "x": 60, "y": 40, "sensors": [
+          { "id": "sp14", "name": "占用状态", "value": "空闲", "unit": "", "status": "normal" },
+          { "id": "sp15", "name": "设备在线", "value": "4", "unit": "台", "status": "normal" }
+        ]},
+        { "id": "p8", "name": "会议室B", "x": 60, "y": 100, "sensors": [
+          { "id": "sp16", "name": "占用状态", "value": "使用中", "unit": "", "status": "warning" },
+          { "id": "sp17", "name": "二氧化碳", "value": "620", "unit": "ppm", "status": "warning" }
+        ]},
+        { "id": "p9", "name": "食堂", "x": 180, "y": 70, "sensors": [
+          { "id": "sp18", "name": "就餐人数", "value": "45", "unit": "人", "status": "normal" },
+          { "id": "sp19", "name": "菜品温度", "value": "65", "unit": "°C", "status": "normal" }
+        ]}
+      ]
+    },
+    {
+      "id": "b4",
+      "name": "D栋 · 宿舍楼",
+      "x": 100,
+      "y": 220,
+      "width": 140,
+      "height": 100,
+      "color": "#8E44AD",
+      "sensors": [
+        { "id": "s10", "name": "温度传感器", "value": "25.0", "unit": "°C", "status": "normal" },
+        { "id": "s11", "name": "水电表", "value": "正常", "unit": "", "status": "normal" }
+      ],
+      "points": [
+        { "id": "p10", "name": "一楼宿舍", "x": 60, "y": 40, "sensors": [
+          { "id": "sp20", "name": "用电量", "value": "2.3", "unit": "kWh", "status": "normal" },
+          { "id": "sp21", "name": "用水量", "value": "0.5", "unit": "m³", "status": "normal" }
+        ]},
+        { "id": "p11", "name": "二楼宿舍", "x": 60, "y": 100, "sensors": [
+          { "id": "sp22", "name": "用电量", "value": "3.1", "unit": "kWh", "status": "warning" },
+          { "id": "sp23", "name": "用水量", "value": "0.8", "unit": "m³", "status": "normal" }
+        ]}
+      ]
+    },
+    {
+      "id": "b5",
+      "name": "E栋 · 后勤中心",
+      "x": 320,
+      "y": 220,
+      "width": 140,
+      "height": 100,
+      "color": "#C0392B",
+      "sensors": [
+        { "id": "s12", "name": "温度传感器", "value": "27.5", "unit": "°C", "status": "warning" },
+        { "id": "s13", "name": "烟雾传感器", "value": "正常", "unit": "", "status": "normal" }
+      ],
+      "points": [
+        { "id": "p12", "name": "配电室", "x": 60, "y": 40, "sensors": [
+          { "id": "sp24", "name": "总功率", "value": "450", "unit": "kW", "status": "normal" },
+          { "id": "sp25", "name": "电流", "value": "320", "unit": "A", "status": "normal" }
+        ]},
+        { "id": "p13", "name": "水泵房", "x": 60, "y": 100, "sensors": [
+          { "id": "sp26", "name": "水压", "value": "0.4", "unit": "MPa", "status": "normal" },
+          { "id": "sp27", "name": "流量", "value": "12", "unit": "L/s", "status": "normal" }
+        ]}
+      ]
+    }
+  ],
+  "roads": [
+    {"x1": 180, "y1": 130, "x2": 320, "y2": 130},
+    {"x1": 480, "y1": 130, "x2": 540, "y2": 130},
+    {"x1": 180, "y1": 180, "x2": 180, "y2": 220},
+    {"x1": 320, "y1": 180, "x2": 320, "y2": 220},
+    {"x1": 180, "y1": 130, "x2": 180, "y2": 180},
+    {"x1": 480, "y1": 130, "x2": 480, "y2": 180},
+    {"x1": 180, "y1": 180, "x2": 480, "y2": 180}
+  ]
+}

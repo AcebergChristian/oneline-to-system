@@ -1,0 +1,9 @@
+[
+  {
+    "id": 1,
+    "username": "admin",
+    "password": "pbkdf2_sha256$120000$7qSTmcxFC/wNoSFr0s4ZUQ==$bfG7B7d4bTxwKMBX8rme9XUUCu/0HKDWpM9Sxt9jj2g=",
+    "role": "admin",
+    "display_name": "管理员"
+  }
+]

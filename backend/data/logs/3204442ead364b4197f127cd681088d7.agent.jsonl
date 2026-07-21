@@ -1,0 +1,42 @@
+{"ts": "2026-07-20T12:48:22.948415", "scope": "3204442ead364b4197f127cd681088d7", "channel": "agent", "event": "run_started", "payload": {"project_slug": "project5", "prompt_length": 352, "memory_window": 8, "model": "deepseek-v4-flash"}}
+{"ts": "2026-07-20T12:48:33.373285", "scope": "3204442ead364b4197f127cd681088d7", "channel": "agent", "event": "plan_generated", "payload": {"chars": 911}}
+{"ts": "2026-07-20T12:48:36.285577", "scope": "3204442ead364b4197f127cd681088d7", "channel": "agent", "event": "assistant_thinking", "payload": {"chars": 22, "round_index": 0}}
+{"ts": "2026-07-20T12:48:54.408347", "scope": "3204442ead364b4197f127cd681088d7", "channel": "agent", "event": "assistant_thinking", "payload": {"chars": 151, "round_index": 1}}
+{"ts": "2026-07-20T12:48:56.253368", "scope": "3204442ead364b4197f127cd681088d7", "channel": "agent", "event": "assistant_thinking", "payload": {"chars": 17, "round_index": 2}}
+{"ts": "2026-07-20T12:49:02.496707", "scope": "3204442ead364b4197f127cd681088d7", "channel": "agent", "event": "assistant_thinking", "payload": {"chars": 26, "round_index": 4}}
+{"ts": "2026-07-20T12:49:19.800312", "scope": "3204442ead364b4197f127cd681088d7", "channel": "agent", "event": "assistant_thinking", "payload": {"chars": 26, "round_index": 6}}
+{"ts": "2026-07-20T12:49:21.541411", "scope": "3204442ead364b4197f127cd681088d7", "channel": "agent", "event": "assistant_thinking", "payload": {"chars": 46, "round_index": 7}}
+{"ts": "2026-07-20T12:49:25.529176", "scope": "3204442ead364b4197f127cd681088d7", "channel": "agent", "event": "assistant_thinking", "payload": {"chars": 17, "round_index": 8}}
+{"ts": "2026-07-20T12:49:28.533459", "scope": "3204442ead364b4197f127cd681088d7", "channel": "agent", "event": "assistant_thinking", "payload": {"chars": 18, "round_index": 9}}
+{"ts": "2026-07-20T12:49:28.537347", "scope": "3204442ead364b4197f127cd681088d7", "channel": "agent", "event": "run_failed", "payload": {"error": "1 validation error for ToolAction\naction\n  Input should be 'list', 'read', 'write' or 'mkdir' [type=literal_error, input_value='bash', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.11/v/literal_error"}}
+{"ts": "2026-07-20T12:50:12.588577", "scope": "3204442ead364b4197f127cd681088d7", "channel": "agent", "event": "run_started", "payload": {"project_slug": "project5", "prompt_length": 87, "memory_window": 8, "model": "deepseek-v4-flash"}}
+{"ts": "2026-07-20T12:50:39.454948", "scope": "3204442ead364b4197f127cd681088d7", "channel": "agent", "event": "plan_generated", "payload": {"chars": 383}}
+{"ts": "2026-07-20T12:55:31.851797", "scope": "3204442ead364b4197f127cd681088d7", "channel": "agent", "event": "run_started", "payload": {"project_slug": "project5", "prompt_length": 235, "memory_window": 8, "model": "deepseek-v4-flash"}}
+{"ts": "2026-07-20T12:55:40.999447", "scope": "3204442ead364b4197f127cd681088d7", "channel": "agent", "event": "plan_generated", "payload": {"chars": 633}}
+{"ts": "2026-07-20T12:56:23.525571", "scope": "3204442ead364b4197f127cd681088d7", "channel": "agent", "event": "assistant_thinking", "payload": {"chars": 359, "round_index": 4}}
+{"ts": "2026-07-20T12:56:25.848204", "scope": "3204442ead364b4197f127cd681088d7", "channel": "agent", "event": "assistant_thinking", "payload": {"chars": 56, "round_index": 5}}
+{"ts": "2026-07-20T12:56:33.255859", "scope": "3204442ead364b4197f127cd681088d7", "channel": "agent", "event": "assistant_thinking", "payload": {"chars": 1155, "round_index": 6}}
+{"ts": "2026-07-20T12:56:33.272875", "scope": "3204442ead364b4197f127cd681088d7", "channel": "agent", "event": "tool_loop_completed", "payload": {"rounds": 6}}
+{"ts": "2026-07-20T12:56:33.280770", "scope": "3204442ead364b4197f127cd681088d7", "channel": "agent", "event": "run_completed", "payload": {"final_chars": 1155, "project_path": "project/project5"}}
+{"ts": "2026-07-20T12:57:00.601489", "scope": "3204442ead364b4197f127cd681088d7", "channel": "agent", "event": "run_started", "payload": {"project_slug": "project5", "prompt_length": 236, "memory_window": 8, "model": "deepseek-v4-flash"}}
+{"ts": "2026-07-20T12:57:06.536006", "scope": "3204442ead364b4197f127cd681088d7", "channel": "agent", "event": "plan_generated", "payload": {"chars": 602}}
+{"ts": "2026-07-20T12:57:14.419241", "scope": "3204442ead364b4197f127cd681088d7", "channel": "agent", "event": "assistant_thinking", "payload": {"chars": 87, "round_index": 2}}
+{"ts": "2026-07-20T12:57:18.742961", "scope": "3204442ead364b4197f127cd681088d7", "channel": "agent", "event": "assistant_thinking", "payload": {"chars": 95, "round_index": 3}}
+{"ts": "2026-07-20T12:57:26.096421", "scope": "3204442ead364b4197f127cd681088d7", "channel": "agent", "event": "assistant_thinking", "payload": {"chars": 1098, "round_index": 4}}
+{"ts": "2026-07-20T12:57:26.115228", "scope": "3204442ead364b4197f127cd681088d7", "channel": "agent", "event": "tool_loop_completed", "payload": {"rounds": 4}}
+{"ts": "2026-07-20T12:57:26.125053", "scope": "3204442ead364b4197f127cd681088d7", "channel": "agent", "event": "run_completed", "payload": {"final_chars": 1098, "project_path": "project/project5"}}
+{"ts": "2026-07-20T13:00:19.680366", "scope": "3204442ead364b4197f127cd681088d7", "channel": "agent", "event": "run_started", "payload": {"project_slug": "project5", "prompt_length": 106, "memory_window": 8, "model": "deepseek-v4-flash"}}
+{"ts": "2026-07-20T13:00:27.749252", "scope": "3204442ead364b4197f127cd681088d7", "channel": "agent", "event": "plan_generated", "payload": {"chars": 1119}}
+{"ts": "2026-07-20T13:00:31.945845", "scope": "3204442ead364b4197f127cd681088d7", "channel": "agent", "event": "assistant_thinking", "payload": {"chars": 102, "round_index": 0}}
+{"ts": "2026-07-20T13:00:35.996330", "scope": "3204442ead364b4197f127cd681088d7", "channel": "agent", "event": "assistant_thinking", "payload": {"chars": 115, "round_index": 1}}
+{"ts": "2026-07-20T13:00:59.462718", "scope": "3204442ead364b4197f127cd681088d7", "channel": "agent", "event": "assistant_thinking", "payload": {"chars": 12, "round_index": 2}}
+{"ts": "2026-07-20T13:01:01.542394", "scope": "3204442ead364b4197f127cd681088d7", "channel": "agent", "event": "assistant_thinking", "payload": {"chars": 65, "round_index": 3}}
+{"ts": "2026-07-20T13:01:07.281773", "scope": "3204442ead364b4197f127cd681088d7", "channel": "agent", "event": "assistant_thinking", "payload": {"chars": 22, "round_index": 5}}
+{"ts": "2026-07-20T13:01:14.046981", "scope": "3204442ead364b4197f127cd681088d7", "channel": "agent", "event": "assistant_thinking", "payload": {"chars": 972, "round_index": 6}}
+{"ts": "2026-07-20T13:01:14.067404", "scope": "3204442ead364b4197f127cd681088d7", "channel": "agent", "event": "tool_loop_completed", "payload": {"rounds": 6}}
+{"ts": "2026-07-20T13:01:14.078503", "scope": "3204442ead364b4197f127cd681088d7", "channel": "agent", "event": "run_completed", "payload": {"final_chars": 972, "project_path": "project/project5"}}
+{"ts": "2026-07-20T13:06:04.348257", "scope": "3204442ead364b4197f127cd681088d7", "channel": "agent", "event": "run_started", "payload": {"project_slug": "project5", "prompt_length": 417, "memory_window": 8, "model": "deepseek-v4-flash"}}
+{"ts": "2026-07-20T13:06:08.135074", "scope": "3204442ead364b4197f127cd681088d7", "channel": "agent", "event": "plan_generated", "payload": {"chars": 694}}
+{"ts": "2026-07-20T13:06:29.142863", "scope": "3204442ead364b4197f127cd681088d7", "channel": "agent", "event": "assistant_thinking", "payload": {"chars": 1542, "round_index": 4}}
+{"ts": "2026-07-20T13:06:29.164673", "scope": "3204442ead364b4197f127cd681088d7", "channel": "agent", "event": "tool_loop_completed", "payload": {"rounds": 4}}
+{"ts": "2026-07-20T13:06:29.176931", "scope": "3204442ead364b4197f127cd681088d7", "channel": "agent", "event": "run_completed", "payload": {"final_chars": 1542, "project_path": "project/project5"}}

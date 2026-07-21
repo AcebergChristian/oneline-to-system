@@ -1,0 +1,13 @@
+[
+  {
+    "id": 1,
+    "title": "1",
+    "description": "1",
+    "priority": "medium",
+    "status": "open",
+    "creator": "admin",
+    "assignee": null,
+    "created_at": "2026-07-20T12:18:16.870942",
+    "updated_at": "2026-07-20T12:18:16.870942"
+  }
+]

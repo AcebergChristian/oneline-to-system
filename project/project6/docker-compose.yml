@@ -1,0 +1,18 @@
+services:
+  backend:
+    build: ./backend
+    container_name: game1024-backend
+    ports:
+      - "8006:8000"
+    volumes:
+      - ./backend/data:/app/data
+
+  frontend:
+    build: ./frontend
+    container_name: game1024-frontend
+    ports:
+      - "3006:80"
+    depends_on:
+      - backend
+    environment:
+      - REACT_APP_API_URL=http://localhost:8006

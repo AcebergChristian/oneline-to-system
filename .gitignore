@@ -1,0 +1,9 @@
+venv/
+__pycache__/
+.DS_Store
+node_modules/
+dist/
+.pytest_cache/
+backend/data/sessions/*.lock
+backend/data/streams/*.lock
+frontend/.vite/

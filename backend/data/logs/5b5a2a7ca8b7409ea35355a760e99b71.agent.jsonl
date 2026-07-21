@@ -1,0 +1,13 @@
+{"ts": "2026-07-20T13:20:57.021210", "scope": "5b5a2a7ca8b7409ea35355a760e99b71", "channel": "agent", "event": "session_initialized", "payload": {"project_slug": "project6", "title": "给我做一个 web界面的小游戏。 1024 那种", "preview_url": "http://localhost:3006"}}
+{"ts": "2026-07-20T13:20:57.069648", "scope": "5b5a2a7ca8b7409ea35355a760e99b71", "channel": "agent", "event": "run_started", "payload": {"project_slug": "project6", "prompt_length": 50, "memory_window": 8, "model": "deepseek-v4-flash"}}
+{"ts": "2026-07-20T13:21:18.496727", "scope": "5b5a2a7ca8b7409ea35355a760e99b71", "channel": "agent", "event": "plan_generated", "payload": {"chars": 447}}
+{"ts": "2026-07-20T13:21:24.218892", "scope": "5b5a2a7ca8b7409ea35355a760e99b71", "channel": "agent", "event": "assistant_thinking", "payload": {"chars": 160, "round_index": 0}}
+{"ts": "2026-07-20T13:21:32.105715", "scope": "5b5a2a7ca8b7409ea35355a760e99b71", "channel": "agent", "event": "assistant_thinking", "payload": {"chars": 11, "round_index": 1}}
+{"ts": "2026-07-20T13:21:53.711474", "scope": "5b5a2a7ca8b7409ea35355a760e99b71", "channel": "agent", "event": "assistant_thinking", "payload": {"chars": 13, "round_index": 2}}
+{"ts": "2026-07-20T13:22:17.193267", "scope": "5b5a2a7ca8b7409ea35355a760e99b71", "channel": "agent", "event": "assistant_thinking", "payload": {"chars": 18, "round_index": 3}}
+{"ts": "2026-07-20T13:22:38.821519", "scope": "5b5a2a7ca8b7409ea35355a760e99b71", "channel": "agent", "event": "assistant_thinking", "payload": {"chars": 48, "round_index": 4}}
+{"ts": "2026-07-20T13:22:41.763090", "scope": "5b5a2a7ca8b7409ea35355a760e99b71", "channel": "agent", "event": "assistant_thinking", "payload": {"chars": 28, "round_index": 5}}
+{"ts": "2026-07-20T13:22:45.322223", "scope": "5b5a2a7ca8b7409ea35355a760e99b71", "channel": "agent", "event": "assistant_thinking", "payload": {"chars": 17, "round_index": 6}}
+{"ts": "2026-07-20T13:22:51.843400", "scope": "5b5a2a7ca8b7409ea35355a760e99b71", "channel": "agent", "event": "assistant_thinking", "payload": {"chars": 1222, "round_index": 7}}
+{"ts": "2026-07-20T13:22:51.852516", "scope": "5b5a2a7ca8b7409ea35355a760e99b71", "channel": "agent", "event": "tool_loop_completed", "payload": {"rounds": 7}}
+{"ts": "2026-07-20T13:22:51.856341", "scope": "5b5a2a7ca8b7409ea35355a760e99b71", "channel": "agent", "event": "run_completed", "payload": {"final_chars": 1222, "project_path": "project/project6"}}

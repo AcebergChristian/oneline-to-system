@@ -1,0 +1,480 @@
+/* ===== 全局布局 ===== */
+.dashboard {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(135deg, #0a1628 0%, #132a4e 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.header {
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 20, 50, 0.8);
+  border-bottom: 1px solid rgba(0, 150, 255, 0.3);
+  box-shadow: 0 2px 20px rgba(0, 100, 255, 0.1);
+  flex-shrink: 0;
+  position: relative;
+  z-index: 10;
+}
+
+.header h1 {
+  font-size: 26px;
+  font-weight: 700;
+  background: linear-gradient(90deg, #00d4ff, #0088ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: 6px;
+  text-shadow: 0 0 30px rgba(0, 136, 255, 0.3);
+}
+
+.header-time {
+  position: absolute;
+  right: 30px;
+  font-size: 14px;
+  color: #8ab4f8;
+  -webkit-text-fill-color: #8ab4f8;
+}
+
+.main-content {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* ===== 左侧面板 ===== */
+.side-panel {
+  width: 300px;
+  background: rgba(0, 20, 50, 0.6);
+  border-right: 1px solid rgba(0, 150, 255, 0.2);
+  padding: 20px;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.side-panel h2 {
+  font-size: 16px;
+  color: #00d4ff;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(0, 150, 255, 0.2);
+}
+
+.side-panel .stat-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 10px;
+  margin-bottom: 4px;
+  background: rgba(0, 100, 200, 0.08);
+  border-radius: 4px;
+  font-size: 13px;
+  transition: background 0.2s;
+  cursor: default;
+}
+
+.side-panel .stat-item:hover {
+  background: rgba(0, 150, 255, 0.15);
+}
+
+.side-panel .stat-label {
+  color: #8ab4f8;
+}
+
+.side-panel .stat-value {
+  color: #e0e6ed;
+  font-weight: 600;
+}
+
+.side-panel .stat-value.warning {
+  color: #ffa726;
+}
+
+.side-panel .stat-value.danger {
+  color: #ef5350;
+}
+
+.building-list {
+  margin-top: 10px;
+}
+
+.building-list-item {
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  background: rgba(0, 80, 160, 0.15);
+  border-left: 3px solid #0088ff;
+  border-radius: 0 6px 6px 0;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.building-list-item:hover {
+  background: rgba(0, 120, 220, 0.25);
+  transform: translateX(3px);
+}
+
+.building-list-item .bld-name {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.building-list-item .bld-status {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.bld-status.normal {
+  background: rgba(76, 175, 80, 0.2);
+  color: #66bb6a;
+}
+
+.bld-status.warning {
+  background: rgba(255, 167, 38, 0.2);
+  color: #ffa726;
+}
+
+/* ===== 地图区域 ===== */
+.map-area {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: auto;
+}
+
+.map-container {
+  position: relative;
+}
+
+.map-container svg {
+  display: block;
+}
+
+/* ===== 楼宇样式 ===== */
+.building-rect {
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.building-rect:hover {
+  filter: brightness(1.3);
+}
+
+.building-rect.selected {
+  stroke: #00e5ff;
+  stroke-width: 3;
+  filter: drop-shadow(0 0 15px rgba(0, 229, 255, 0.6));
+}
+
+.building-label {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  fill: #fff;
+  text-anchor: middle;
+  pointer-events: none;
+}
+
+.building-label small {
+  font-size: 11px;
+  fill: #8ab4f8;
+  font-weight: normal;
+}
+
+/* ===== 道路 ===== */
+.road-line {
+  stroke: rgba(0, 150, 255, 0.15);
+  stroke-width: 4;
+  stroke-dasharray: 8, 4;
+  fill: none;
+}
+
+/* ===== 点位标记 ===== */
+.point-marker {
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.point-marker circle {
+  transition: all 0.2s;
+}
+
+.point-marker:hover circle {
+  r: 8;
+  fill: #00e5ff;
+}
+
+.point-marker.selected circle {
+  fill: #00e5ff;
+  r: 8;
+  filter: drop-shadow(0 0 8px rgba(0, 229, 255, 0.8));
+}
+
+/* ===== 传感器详情弹窗 ===== */
+.detail-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.detail-card {
+  background: linear-gradient(135deg, #0f2a4a, #1a3a5e);
+  border: 1px solid rgba(0, 150, 255, 0.3);
+  border-radius: 16px;
+  padding: 30px;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  position: relative;
+}
+
+.detail-card h3 {
+  font-size: 20px;
+  color: #00d4ff;
+  margin-bottom: 6px;
+}
+
+.detail-card .subtitle {
+  color: #8ab4f8;
+  font-size: 13px;
+  margin-bottom: 20px;
+}
+
+.detail-card .close-btn {
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  background: none;
+  border: none;
+  color: #8ab4f8;
+  font-size: 24px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.detail-card .close-btn:hover {
+  color: #ef5350;
+}
+
+.sensor-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.sensor-item {
+  background: rgba(0, 80, 160, 0.15);
+  border-radius: 8px;
+  padding: 12px 14px;
+  border: 1px solid rgba(0, 150, 255, 0.1);
+}
+
+.sensor-item .sensor-name {
+  font-size: 12px;
+  color: #8ab4f8;
+  margin-bottom: 4px;
+}
+
+.sensor-item .sensor-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #e0e6ed;
+}
+
+.sensor-item .sensor-value.warning {
+  color: #ffa726;
+}
+
+.sensor-item .sensor-value.danger {
+  color: #ef5350;
+}
+
+.sensor-item .sensor-unit {
+  font-size: 12px;
+  color: #5a7a9a;
+  margin-left: 4px;
+}
+
+/* ===== 导航面包屑 ===== */
+.breadcrumb {
+  padding: 8px 30px;
+  background: rgba(0, 20, 50, 0.5);
+  border-bottom: 1px solid rgba(0, 150, 255, 0.1);
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.breadcrumb a {
+  color: #8ab4f8;
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.breadcrumb a:hover {
+  color: #00d4ff;
+}
+
+.breadcrumb .sep {
+  color: #3a5a7a;
+}
+
+.breadcrumb .current {
+  color: #00d4ff;
+}
+
+/* ===== 返回按钮 ===== */
+.back-btn {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: rgba(0, 100, 200, 0.2);
+  border: 1px solid rgba(0, 150, 255, 0.3);
+  color: #8ab4f8;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+  z-index: 5;
+}
+
+.back-btn:hover {
+  background: rgba(0, 150, 255, 0.3);
+  color: #00d4ff;
+}
+
+/* ===== 滚动条 ===== */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: rgba(0, 20, 50, 0.3); }
+::-webkit-scrollbar-thumb { background: rgba(0, 150, 255, 0.3); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0, 150, 255, 0.5); }
+
+/* ===== 楼宇内部视图 ===== */
+.building-interior {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  position: relative;
+}
+
+.floor-plan {
+  background: rgba(0, 30, 60, 0.5);
+  border: 1px solid rgba(0, 150, 255, 0.2);
+  border-radius: 12px;
+  padding: 30px;
+  max-width: 700px;
+  width: 100%;
+}
+
+.floor-plan h3 {
+  text-align: center;
+  color: #00d4ff;
+  margin-bottom: 20px;
+  font-size: 18px;
+}
+
+.floor-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.point-card {
+  background: rgba(0, 80, 160, 0.15);
+  border: 1px solid rgba(0, 150, 255, 0.15);
+  border-radius: 10px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.point-card:hover {
+  background: rgba(0, 120, 220, 0.25);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 100, 200, 0.2);
+}
+
+.point-card h4 {
+  font-size: 15px;
+  color: #e0e6ed;
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(0, 150, 255, 0.1);
+}
+
+.point-card .sensor-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  padding: 3px 0;
+}
+
+.point-card .sensor-row .label {
+  color: #8ab4f8;
+}
+
+.point-card .sensor-row .value {
+  color: #e0e6ed;
+}
+
+.point-card .sensor-row .value.warning {
+  color: #ffa726;
+}
+
+/* ===== 全局统计卡片 ===== */
+.stats-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.stat-card {
+  background: rgba(0, 80, 160, 0.1);
+  border-radius: 8px;
+  padding: 12px;
+  text-align: center;
+  border: 1px solid rgba(0, 150, 255, 0.1);
+}
+
+.stat-card .stat-number {
+  font-size: 24px;
+  font-weight: 700;
+  color: #00d4ff;
+}
+
+.stat-card .stat-label {
+  font-size: 11px;
+  color: #8ab4f8;
+  margin-top: 4px;
+}
+
+/* ===== 响应式 ===== */
+@media (max-width: 1024px) {
+  .side-panel { width: 240px; }
+  .floor-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 768px) {
+  .main-content { flex-direction: column; }
+  .side-panel { width: 100%; max-height: 200px; }
+}

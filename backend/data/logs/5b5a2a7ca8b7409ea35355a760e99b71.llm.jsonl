@@ -1,0 +1,18 @@
+{"ts": "2026-07-20T13:20:57.072158", "scope": "5b5a2a7ca8b7409ea35355a760e99b71", "channel": "llm", "event": "plan_request_started", "payload": {"model": "deepseek-v4-flash", "history_count": 1}}
+{"ts": "2026-07-20T13:21:18.496111", "scope": "5b5a2a7ca8b7409ea35355a760e99b71", "channel": "llm", "event": "plan_request_finished", "payload": {"has_text": true, "chars": 447}}
+{"ts": "2026-07-20T13:21:18.499213", "scope": "5b5a2a7ca8b7409ea35355a760e99b71", "channel": "llm", "event": "tool_loop_request_started", "payload": {"message_count": 3, "tools_enabled": true}}
+{"ts": "2026-07-20T13:21:24.218380", "scope": "5b5a2a7ca8b7409ea35355a760e99b71", "channel": "llm", "event": "tool_loop_request_finished", "payload": {}}
+{"ts": "2026-07-20T13:21:24.244883", "scope": "5b5a2a7ca8b7409ea35355a760e99b71", "channel": "llm", "event": "tool_followup_request_started", "payload": {"round_index": 1, "message_count": 10}}
+{"ts": "2026-07-20T13:21:32.104556", "scope": "5b5a2a7ca8b7409ea35355a760e99b71", "channel": "llm", "event": "tool_followup_request_finished", "payload": {"round_index": 1}}
+{"ts": "2026-07-20T13:21:32.139925", "scope": "5b5a2a7ca8b7409ea35355a760e99b71", "channel": "llm", "event": "tool_followup_request_started", "payload": {"round_index": 2, "message_count": 15}}
+{"ts": "2026-07-20T13:21:53.709717", "scope": "5b5a2a7ca8b7409ea35355a760e99b71", "channel": "llm", "event": "tool_followup_request_finished", "payload": {"round_index": 2}}
+{"ts": "2026-07-20T13:21:53.754793", "scope": "5b5a2a7ca8b7409ea35355a760e99b71", "channel": "llm", "event": "tool_followup_request_started", "payload": {"round_index": 3, "message_count": 20}}
+{"ts": "2026-07-20T13:22:17.192277", "scope": "5b5a2a7ca8b7409ea35355a760e99b71", "channel": "llm", "event": "tool_followup_request_finished", "payload": {"round_index": 3}}
+{"ts": "2026-07-20T13:22:17.223914", "scope": "5b5a2a7ca8b7409ea35355a760e99b71", "channel": "llm", "event": "tool_followup_request_started", "payload": {"round_index": 4, "message_count": 25}}
+{"ts": "2026-07-20T13:22:38.820857", "scope": "5b5a2a7ca8b7409ea35355a760e99b71", "channel": "llm", "event": "tool_followup_request_finished", "payload": {"round_index": 4}}
+{"ts": "2026-07-20T13:22:38.847026", "scope": "5b5a2a7ca8b7409ea35355a760e99b71", "channel": "llm", "event": "tool_followup_request_started", "payload": {"round_index": 5, "message_count": 29}}
+{"ts": "2026-07-20T13:22:41.762244", "scope": "5b5a2a7ca8b7409ea35355a760e99b71", "channel": "llm", "event": "tool_followup_request_finished", "payload": {"round_index": 5}}
+{"ts": "2026-07-20T13:22:41.783723", "scope": "5b5a2a7ca8b7409ea35355a760e99b71", "channel": "llm", "event": "tool_followup_request_started", "payload": {"round_index": 6, "message_count": 31}}
+{"ts": "2026-07-20T13:22:45.321575", "scope": "5b5a2a7ca8b7409ea35355a760e99b71", "channel": "llm", "event": "tool_followup_request_finished", "payload": {"round_index": 6}}
+{"ts": "2026-07-20T13:22:45.355003", "scope": "5b5a2a7ca8b7409ea35355a760e99b71", "channel": "llm", "event": "tool_followup_request_started", "payload": {"round_index": 7, "message_count": 37}}
+{"ts": "2026-07-20T13:22:51.838137", "scope": "5b5a2a7ca8b7409ea35355a760e99b71", "channel": "llm", "event": "tool_followup_request_finished", "payload": {"round_index": 7}}
