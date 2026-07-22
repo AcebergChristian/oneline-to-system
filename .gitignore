@@ -8,4 +8,4 @@ backend/data/sessions/*.lock
 backend/data/streams/*.lock
 frontend/.vite/
 .env
-.env.example
+
