@@ -381,6 +381,10 @@ function Workspace({
   onSubmit,
   onStartProject,
   onUseRepairPrompt,
+  deploymentDraft,
+  onDeploymentDraftChange,
+  onSaveDeployment,
+  savingDeployment,
   onCloseCreateModal,
   onNewSessionPromptChange,
   onCreateSession,
@@ -411,7 +415,12 @@ function Workspace({
           message={uiMessage}
           onUseRepairPrompt={onUseRepairPrompt}
           showFailureAnalysis={showFailureAnalysis}
+          runtimeMode={runtimeMode}
           isLoading={isLoadingWorkspaceData}
+          deploymentDraft={deploymentDraft}
+          onDeploymentDraftChange={onDeploymentDraftChange}
+          onSaveDeployment={onSaveDeployment}
+          savingDeployment={savingDeployment}
         />
       </div>
 
@@ -455,6 +464,8 @@ export default function App() {
   const [projects, setProjects] = useState([])
   const [runtimeMode, setRuntimeMode] = useState('local')
   const [isLoadingWorkspaceData, setIsLoadingWorkspaceData] = useState(true)
+  const [deploymentDraft, setDeploymentDraft] = useState({ preview_url: '', backend_url: '' })
+  const [savingDeployment, setSavingDeployment] = useState(false)
   const [activeSessionId, setActiveSessionId] = useState('')
   const [activeSession, setActiveSession] = useState(null)
   const [landingPrompt, setLandingPrompt] = useState('')
@@ -487,9 +498,15 @@ export default function App() {
         const detail = await api.getSession(targetId)
         setActiveSessionId(targetId)
         setActiveSession(detail)
+        const project = projectList.find((item) => item.session_id === targetId)
+        setDeploymentDraft({
+          preview_url: project?.preview_url || detail?.preview_url || '',
+          backend_url: project?.backend_url || detail?.backend_url || '',
+        })
       } else {
         setActiveSessionId('')
         setActiveSession(null)
+        setDeploymentDraft({ preview_url: '', backend_url: '' })
       }
     } finally {
       setIsLoadingWorkspaceData(false)
@@ -569,6 +586,11 @@ export default function App() {
     const detail = await api.getSession(sessionId)
     setActiveSessionId(sessionId)
     setActiveSession(detail)
+    const project = projects.find((item) => item.session_id === sessionId)
+    setDeploymentDraft({
+      preview_url: project?.preview_url || detail?.preview_url || '',
+      backend_url: project?.backend_url || detail?.backend_url || '',
+    })
     navigate(ROUTES.workspace)
   }
 
@@ -622,6 +644,24 @@ export default function App() {
     setWorkspacePrompt(prompt)
   }
 
+  function handleDeploymentDraftChange(field, value) {
+    setDeploymentDraft((current) => ({ ...current, [field]: value }))
+  }
+
+  async function handleSaveDeployment() {
+    if (!activeSessionId) return
+    setSavingDeployment(true)
+    try {
+      await api.updateProjectDeployment(activeSessionId, deploymentDraft)
+      await refreshSessions(activeSessionId)
+      pushMessage('部署地址已保存。')
+    } catch (error) {
+      pushMessage(error.message || '保存部署地址失败')
+    } finally {
+      setSavingDeployment(false)
+    }
+  }
+
   if (route === ROUTES.pricing) {
     return <PricingPage onNavigate={navigate} />
   }
@@ -653,6 +693,10 @@ export default function App() {
         onStartProject={handleStartProject}
         onUseRepairPrompt={handleUseRepairPrompt}
         runtimeMode={runtimeMode}
+        deploymentDraft={deploymentDraft}
+        onDeploymentDraftChange={handleDeploymentDraftChange}
+        onSaveDeployment={handleSaveDeployment}
+        savingDeployment={savingDeployment}
         onCloseCreateModal={() => {
           setShowCreateModal(false)
           setNewSessionPrompt('')

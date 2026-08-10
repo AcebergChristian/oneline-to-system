@@ -121,6 +121,10 @@ export function PreviewPanel({
   showFailureAnalysis,
   runtimeMode,
   isLoading,
+  deploymentDraft,
+  onDeploymentDraftChange,
+  onSaveDeployment,
+  savingDeployment,
 }) {
   const project = projects.find((item) => item.session_id === session?.id)
   const runtimeStatus = project?.runtime_status || 'idle'
@@ -193,6 +197,33 @@ export function PreviewPanel({
             <div>运行状态：{runtimeStatus}</div>
             <div>本地记录：`backend/data/sessions/*.json` 与 `backend/data/logs/*.jsonl`</div>
           </div>
+          {runtimeMode === 'external' ? (
+            <div className="mt-4 space-y-3 rounded-2xl border border-white/10 bg-black/20 p-3">
+              <div className="text-xs uppercase tracking-[0.2em] text-fog/70">Deployment URLs</div>
+              <input
+                type="url"
+                value={deploymentDraft?.preview_url || ''}
+                onChange={(event) => onDeploymentDraftChange?.('preview_url', event.target.value)}
+                placeholder="https://your-frontend.onrender.com"
+                className="w-full rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-sand outline-none placeholder:text-fog/50"
+              />
+              <input
+                type="url"
+                value={deploymentDraft?.backend_url || ''}
+                onChange={(event) => onDeploymentDraftChange?.('backend_url', event.target.value)}
+                placeholder="https://your-backend.onrender.com"
+                className="w-full rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-sand outline-none placeholder:text-fog/50"
+              />
+              <button
+                type="button"
+                onClick={onSaveDeployment}
+                disabled={!session || savingDeployment}
+                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-fog disabled:opacity-60"
+              >
+                {savingDeployment ? '保存中...' : '保存部署地址'}
+              </button>
+            </div>
+          ) : null}
           <div className="mt-4 flex gap-3">
             <button
               type="button"

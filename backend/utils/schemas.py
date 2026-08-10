@@ -53,3 +53,8 @@ class ToolResult(BaseModel):
     ok: bool
     message: str
     data: dict[str, Any] = Field(default_factory=dict)
+
+
+class ProjectDeploymentUpdate(BaseModel):
+    preview_url: str | None = None
+    backend_url: str | None = None

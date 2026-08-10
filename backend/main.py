@@ -17,7 +17,7 @@ from utils.config import ensure_data_dirs, get_settings
 from utils.logger import extract_session_id_from_request, log_session_event, log_system_event
 from utils.project_tools import run_tool_action
 from utils.project_runner import refresh_project_entry_runtime, start_project_for_session
-from utils.schemas import ChatRequest, Message, SessionCreateRequest, StepEvent, ToolAction
+from utils.schemas import ChatRequest, Message, ProjectDeploymentUpdate, SessionCreateRequest, StepEvent, ToolAction
 from utils.storage import (
     append_message,
     append_step,
@@ -27,6 +27,7 @@ from utils.storage import (
     load_project_meta,
     load_session,
     save_project_meta,
+    upsert_project_meta,
 )
 
 
@@ -211,6 +212,33 @@ def start_project(session_id: str):
     except Exception as exc:  # noqa: BLE001
         log_session_event(session_id, "api", "project_start_error", {"detail": str(exc)})
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.patch("/api/projects/{session_id}")
+def update_project_deployment(session_id: str, payload: ProjectDeploymentUpdate):
+    session = load_session(session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    existing = get_project_meta(session_id) or {
+        "session_id": session.id,
+        "project_slug": session.project_slug,
+        "title": session.title,
+        "path": f"project/{session.project_slug}",
+    }
+    updated = {
+        **existing,
+        "preview_url": payload.preview_url or existing.get("preview_url") or session.preview_url,
+        "backend_url": payload.backend_url or existing.get("backend_url") or session.backend_url,
+    }
+    upsert_project_meta(updated)
+    log_session_event(
+        session_id,
+        "api",
+        "project_deployment_updated",
+        {"preview_url": updated.get("preview_url"), "backend_url": updated.get("backend_url")},
+    )
+    return updated
 
 
 @app.get("/api/config")

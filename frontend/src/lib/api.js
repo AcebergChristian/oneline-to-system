@@ -36,6 +36,11 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
+  updateProjectDeployment: (sessionId, payload) =>
+    request(`/projects/${sessionId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
   listProjects: () => request('/projects'),
   getConfig: () => request('/config'),
 }
