@@ -450,6 +450,7 @@ export default function App() {
   const { route, navigate } = useLocalRoute()
   const [sessions, setSessions] = useState([])
   const [projects, setProjects] = useState([])
+  const [runtimeMode, setRuntimeMode] = useState('local')
   const [activeSessionId, setActiveSessionId] = useState('')
   const [activeSession, setActiveSession] = useState(null)
   const [landingPrompt, setLandingPrompt] = useState('')
@@ -488,6 +489,9 @@ export default function App() {
 
   useEffect(() => {
     refreshSessions().catch(console.error)
+    api.getConfig().then((config) => {
+      setRuntimeMode(config?.project_runtime_mode || 'local')
+    }).catch(console.error)
     return () => {
       if (eventSourceRef.current) {
         eventSourceRef.current.close()
@@ -638,6 +642,7 @@ export default function App() {
         onSubmit={handleWorkspaceSubmit}
         onStartProject={handleStartProject}
         onUseRepairPrompt={handleUseRepairPrompt}
+        runtimeMode={runtimeMode}
         onCloseCreateModal={() => {
           setShowCreateModal(false)
           setNewSessionPrompt('')

@@ -119,6 +119,7 @@ export function PreviewPanel({
   message,
   onUseRepairPrompt,
   showFailureAnalysis,
+  runtimeMode,
 }) {
   const project = projects.find((item) => item.session_id === session?.id)
   const runtimeStatus = project?.runtime_status || 'idle'
@@ -189,7 +190,7 @@ export function PreviewPanel({
               className="flex items-center gap-2 rounded-2xl bg-ember px-4 py-3 text-sm font-medium text-white disabled:opacity-60"
             >
               <Play size={16} />
-              {startingProject ? '启动中...' : '启动项目'}
+              {startingProject ? (runtimeMode === 'external' ? '检查中...' : '启动中...') : runtimeMode === 'external' ? '检查部署' : '启动项目'}
             </button>
             {previewUrl ? (
               <a

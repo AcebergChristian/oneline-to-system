@@ -11,7 +11,7 @@ from urllib.error import HTTPError, URLError
 from urllib.request import urlopen
 import yaml
 
-from .config import PROJECT_ROOT
+from .config import PROJECT_ROOT, get_settings
 from .logger import log_session_event
 from .storage import append_project_run, load_session, upsert_project_meta
 
@@ -27,6 +27,35 @@ def _command_available(command: list[str]) -> bool:
     except OSError:
         return False
     return result.returncode == 0
+
+
+def _project_index(project_slug: str) -> int:
+    match = re.search(r"(\d+)$", project_slug)
+    return int(match.group(1)) if match else 1
+
+
+def _format_project_url(template: str, project_slug: str) -> str:
+    index = _project_index(project_slug)
+    return template.format(
+        project_slug=project_slug,
+        project_index=index,
+        port_preview=3000 + index,
+        port_backend=8000 + index,
+    )
+
+
+def _normalize_project_urls(entry: dict) -> dict:
+    settings = get_settings()
+    project_slug = str(entry.get("project_slug", ""))
+    if not project_slug:
+        return entry
+
+    normalized = dict(entry)
+    if settings.project_preview_url_template:
+        normalized["preview_url"] = _format_project_url(settings.project_preview_url_template, project_slug)
+    if settings.project_backend_url_template:
+        normalized["backend_url"] = _format_project_url(settings.project_backend_url_template, project_slug)
+    return normalized
 
 
 def _resolve_compose_command() -> list[str] | None:
@@ -218,7 +247,41 @@ def _check_http_with_retry(url: str | None, attempts: int = 8, delay_seconds: fl
     return False, last_check
 
 
+def _external_runtime_payload(session, project_dir: Path) -> dict:
+    preview_url = session.preview_url
+    backend_url = session.backend_url
+    frontend_ok, frontend_check = _check_http_with_retry(preview_url, attempts=4, delay_seconds=1.0)
+    backend_ok, backend_check = _check_backend_http(backend_url)
+
+    runtime_status = "running"
+    failure_reason = None
+    if not backend_ok:
+        runtime_status = "failed"
+        failure_reason = "backend_unreachable"
+    elif not frontend_ok:
+        runtime_status = "failed"
+        failure_reason = "frontend_unreachable"
+
+    return {
+        "session_id": session.id,
+        "project_slug": session.project_slug,
+        "path": str(project_dir.relative_to(PROJECT_ROOT.parent)),
+        "preview_url": preview_url,
+        "backend_url": backend_url,
+        "runtime_status": runtime_status,
+        "started_at": datetime.utcnow().isoformat(),
+        "command": ["external-healthcheck"],
+        "returncode": 0 if runtime_status == "running" else 1,
+        "stdout": f"preview_check={frontend_check}\nbackend_check={backend_check}",
+        "stderr": "",
+        "failure_reason": failure_reason,
+        "service_states": {"deployment": "external"},
+        "service_state_error": "",
+    }
+
+
 def refresh_project_entry_runtime(entry: dict) -> dict:
+    entry = _normalize_project_urls(entry)
     preview_url = entry.get("preview_url")
     backend_url = entry.get("backend_url")
     frontend_ok, frontend_check = _check_http(preview_url)
@@ -247,6 +310,24 @@ def start_project_for_session(session_id: str) -> dict:
     project_dir = PROJECT_ROOT / session.project_slug
     if not project_dir.exists():
         raise FileNotFoundError(f"Project directory not found: {project_dir}")
+
+    settings = get_settings()
+    if settings.project_runtime_mode.lower() == "external":
+        payload = _external_runtime_payload(session, project_dir)
+        upsert_project_meta(payload)
+        append_project_run(payload)
+        log_session_event(
+            session_id,
+            "project",
+            "external_healthcheck_finished",
+            {
+                "runtime_status": payload["runtime_status"],
+                "preview_url": payload["preview_url"],
+                "backend_url": payload["backend_url"],
+                "failure_reason": payload["failure_reason"],
+            },
+        )
+        return payload
 
     compose_file, using_runtime_compose = _prepare_runtime_compose_file(project_dir)
 

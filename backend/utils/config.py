@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     backend_port: int = 8000
     frontend_port: int = 5173
     public_base_url: str = ""
+    project_runtime_mode: str = "local"
+    project_preview_url_template: str = ""
+    project_backend_url_template: str = ""
 
     model_config = SettingsConfigDict(
         env_file=str(ROOT_DIR / ".env"),

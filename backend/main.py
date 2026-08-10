@@ -220,6 +220,9 @@ def get_config():
         "memory_window": settings.ai_memory_window,
         "frontend_port": settings.frontend_port,
         "backend_port": settings.backend_port,
+        "project_runtime_mode": settings.project_runtime_mode,
+        "project_preview_url_template": settings.project_preview_url_template,
+        "project_backend_url_template": settings.project_backend_url_template,
     }
 
 
@@ -300,13 +303,19 @@ async def _proxy_request(
     }
     body = await request.body()
 
-    async with httpx.AsyncClient(follow_redirects=True, timeout=30.0) as client:
-        upstream = await client.request(
-            request.method,
-            target_url,
-            content=body if body else None,
-            headers=request_headers,
-        )
+    try:
+        async with httpx.AsyncClient(follow_redirects=True, timeout=30.0) as client:
+            upstream = await client.request(
+                request.method,
+                target_url,
+                content=body if body else None,
+                headers=request_headers,
+            )
+    except httpx.RequestError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Project upstream unreachable: {target_url} ({exc})",
+        ) from exc
 
     response_headers = {
         key: value

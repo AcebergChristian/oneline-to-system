@@ -67,15 +67,34 @@ def next_project_slug() -> str:
     return f"project{index}"
 
 
-def preview_url_for_slug(project_slug: str) -> str:
+def _project_index(project_slug: str) -> int:
     match = re.search(r"(\d+)$", project_slug)
-    index = int(match.group(1)) if match else 1
+    return int(match.group(1)) if match else 1
+
+
+def _format_project_url(template: str, project_slug: str) -> str:
+    session = {
+        "project_slug": project_slug,
+        "project_index": _project_index(project_slug),
+        "port_preview": 3000 + _project_index(project_slug),
+        "port_backend": 8000 + _project_index(project_slug),
+    }
+    return template.format(**session)
+
+
+def preview_url_for_slug(project_slug: str) -> str:
+    settings = get_settings()
+    if settings.project_preview_url_template:
+        return _format_project_url(settings.project_preview_url_template, project_slug)
+    index = _project_index(project_slug)
     return f"http://localhost:{3000 + index}"
 
 
 def backend_url_for_slug(project_slug: str) -> str:
-    match = re.search(r"(\d+)$", project_slug)
-    index = int(match.group(1)) if match else 1
+    settings = get_settings()
+    if settings.project_backend_url_template:
+        return _format_project_url(settings.project_backend_url_template, project_slug)
+    index = _project_index(project_slug)
     return f"http://localhost:{8000 + index}"
 
 
@@ -92,6 +111,7 @@ def build_session(prompt: str) -> SessionDetail:
         messages=[Message(role="user", content=prompt)],
         steps=[],
         preview_url=preview_url_for_slug(project_slug),
+        backend_url=backend_url_for_slug(project_slug),
     )
     create_session(session)
     log_session_event(
@@ -124,7 +144,7 @@ def _project_metadata(session: SessionDetail) -> dict[str, Any]:
         "path": str(project_dir.relative_to(PROJECT_ROOT.parent)),
         "created_at": datetime.utcnow().isoformat(),
         "preview_url": session.preview_url,
-        "backend_url": backend_url_for_slug(session.project_slug),
+        "backend_url": session.backend_url or backend_url_for_slug(session.project_slug),
     }
 
 
@@ -188,7 +208,8 @@ def _tool_specs(project_slug: str, preview_url: str) -> list[dict[str, Any]]:
                     f"Write a UTF-8 text file inside project/{project_slug}. "
                     f"Use this to create frontend, backend, Dockerfile and docker-compose.yml. "
                     f"Generated app should be previewable at {preview_url} when the frontend is started. "
-                    f"The generated backend API must use the project-specific port {backend_url}, not the controller backend port 8000."
+                    f"The generated backend API target should be {backend_url}. "
+                    "Do not hardcode the controller backend port 8000 into generated apps."
                 ),
                 "parameters": {
                     "type": "object",
@@ -209,11 +230,11 @@ def _runtime_context(session: SessionDetail) -> str:
     if not project:
         return "No runtime information recorded yet."
 
-        return (
+    return (
         "Latest project runtime context:\n"
         f"- runtime_status: {project.get('runtime_status', 'unknown')}\n"
         f"- preview_url: {project.get('preview_url', session.preview_url or '')}\n"
-        f"- backend_url: {project.get('backend_url', backend_url_for_slug(session.project_slug))}\n"
+        f"- backend_url: {project.get('backend_url', session.backend_url or backend_url_for_slug(session.project_slug))}\n"
         f"- failure_reason: {project.get('failure_reason', '')}\n"
         f"- last_command: {project.get('command', [])}\n"
         f"- stdout_tail: {project.get('stdout', '')[-1200:]}\n"
@@ -326,7 +347,7 @@ async def stream_agent_run(session: SessionDetail, prompt: str):
                     f"{SYSTEM_PROMPT}\n\n"
                     f"Assigned project root: project/{project_slug}\n"
                     f"Required preview URL target: {session.preview_url}\n"
-                    f"Required backend API target: {backend_url_for_slug(project_slug)}\n"
+                    f"Required backend API target: {session.backend_url or backend_url_for_slug(project_slug)}\n"
                     f"{_runtime_context(session)}\n"
                     "Create a real implementation now."
                 ),

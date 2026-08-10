@@ -148,6 +148,27 @@ http://localhost:8000
 - FastAPI 统一提供前端 build 产物和后端 API
 - `docker-compose.yml` 默认读取根目录 `.env`
 
+## 公网项目地址模式
+
+如果主控系统部署在 Render 这类公网环境，不适合继续把生成项目当成本机 `localhost:*` 服务来预览。此时建议切到公网地址模式：
+
+```env
+PUBLIC_BASE_URL=https://oneline-to-system.onrender.com
+PROJECT_RUNTIME_MODE=external
+PROJECT_PREVIEW_URL_TEMPLATE=https://{project_slug}-frontend.onrender.com
+PROJECT_BACKEND_URL_TEMPLATE=https://{project_slug}-api.onrender.com
+```
+
+说明：
+
+- `PROJECT_RUNTIME_MODE=external` 时，“启动项目”会变成检查公网部署状态，不再调用本地 `docker compose`
+- `PROJECT_PREVIEW_URL_TEMPLATE` 和 `PROJECT_BACKEND_URL_TEMPLATE` 支持占位符：
+  - `{project_slug}`
+  - `{project_index}`
+  - `{port_preview}`
+  - `{port_backend}`
+- 主控会把项目元数据里的 `preview_url` / `backend_url` 自动按模板生成并展示给前端
+
 ## 环境变量说明
 
 | 变量 | 说明 | 默认值 |
