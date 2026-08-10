@@ -120,6 +120,7 @@ export function PreviewPanel({
   onUseRepairPrompt,
   showFailureAnalysis,
   runtimeMode,
+  isLoading,
 }) {
   const project = projects.find((item) => item.session_id === session?.id)
   const runtimeStatus = project?.runtime_status || 'idle'
@@ -143,6 +144,16 @@ export function PreviewPanel({
         {message ? (
           <div className="mb-4 rounded-2xl border border-ember/30 bg-ember/10 px-4 py-3 text-sm text-sand">
             {message}
+          </div>
+        ) : null}
+        {isLoading ? (
+          <div className="mb-4 rounded-3xl border border-white/10 bg-white/5 p-4">
+            <div className="h-4 w-24 animate-pulse rounded bg-white/10" />
+            <div className="mt-4 space-y-3">
+              <div className="h-3 w-5/6 animate-pulse rounded bg-white/10" />
+              <div className="h-3 w-2/3 animate-pulse rounded bg-white/10" />
+              <div className="h-3 w-3/4 animate-pulse rounded bg-white/10" />
+            </div>
           </div>
         ) : null}
         {hasFailedStart ? (
@@ -186,7 +197,7 @@ export function PreviewPanel({
             <button
               type="button"
               onClick={onStartProject}
-              disabled={!session || startingProject}
+              disabled={!session || startingProject || isLoading}
               className="flex items-center gap-2 rounded-2xl bg-ember px-4 py-3 text-sm font-medium text-white disabled:opacity-60"
             >
               <Play size={16} />
@@ -207,7 +218,9 @@ export function PreviewPanel({
         </div>
 
         <div className="mt-4 overflow-hidden rounded-3xl border border-white/10 bg-stone-950">
-          {previewUrl ? (
+          {isLoading ? (
+            <div className="p-6 text-sm text-fog/70">项目数据加载中...</div>
+          ) : previewUrl ? (
             <>
               <div className="flex items-center justify-between border-b border-white/10 px-4 py-3 text-xs text-fog">
                 <span>{previewUrl}</span>

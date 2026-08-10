@@ -364,6 +364,7 @@ function DocsPage({ onNavigate }) {
 function Workspace({
   sessions,
   projects,
+  isLoadingWorkspaceData,
   activeSessionId,
   activeSession,
   workspacePrompt,
@@ -393,6 +394,7 @@ function Workspace({
           onSelect={onSelect}
           onCreateSession={onOpenCreateModal}
           onBackToLanding={onBackToLanding}
+          isLoading={isLoadingWorkspaceData}
         />
         <TaskPanel
           session={activeSession}
@@ -409,6 +411,7 @@ function Workspace({
           message={uiMessage}
           onUseRepairPrompt={onUseRepairPrompt}
           showFailureAnalysis={showFailureAnalysis}
+          isLoading={isLoadingWorkspaceData}
         />
       </div>
 
@@ -451,6 +454,7 @@ export default function App() {
   const [sessions, setSessions] = useState([])
   const [projects, setProjects] = useState([])
   const [runtimeMode, setRuntimeMode] = useState('local')
+  const [isLoadingWorkspaceData, setIsLoadingWorkspaceData] = useState(true)
   const [activeSessionId, setActiveSessionId] = useState('')
   const [activeSession, setActiveSession] = useState(null)
   const [landingPrompt, setLandingPrompt] = useState('')
@@ -473,17 +477,22 @@ export default function App() {
   }
 
   async function refreshSessions(nextActiveId) {
-    const [sessionList, projectList] = await Promise.all([api.listSessions(), api.listProjects()])
-    setSessions(sessionList)
-    setProjects(projectList)
-    const targetId = nextActiveId || activeSessionId || sessionList[0]?.id
-    if (targetId) {
-      const detail = await api.getSession(targetId)
-      setActiveSessionId(targetId)
-      setActiveSession(detail)
-    } else {
-      setActiveSessionId('')
-      setActiveSession(null)
+    setIsLoadingWorkspaceData(true)
+    try {
+      const [sessionList, projectList] = await Promise.all([api.listSessions(), api.listProjects()])
+      setSessions(sessionList)
+      setProjects(projectList)
+      const targetId = nextActiveId || activeSessionId || sessionList[0]?.id
+      if (targetId) {
+        const detail = await api.getSession(targetId)
+        setActiveSessionId(targetId)
+        setActiveSession(detail)
+      } else {
+        setActiveSessionId('')
+        setActiveSession(null)
+      }
+    } finally {
+      setIsLoadingWorkspaceData(false)
     }
   }
 
@@ -626,6 +635,7 @@ export default function App() {
       <Workspace
         sessions={sessions}
         projects={projects}
+        isLoadingWorkspaceData={isLoadingWorkspaceData}
         activeSessionId={activeSessionId}
         activeSession={activeSession}
         workspacePrompt={workspacePrompt}
