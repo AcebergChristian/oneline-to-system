@@ -7,12 +7,85 @@ import time
 from datetime import datetime
 from pathlib import Path
 import re
-from urllib.error import URLError
+from urllib.error import HTTPError, URLError
 from urllib.request import urlopen
+import yaml
 
 from .config import PROJECT_ROOT
 from .logger import log_session_event
 from .storage import append_project_run, load_session, upsert_project_meta
+
+
+def _command_available(command: list[str]) -> bool:
+    try:
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except OSError:
+        return False
+    return result.returncode == 0
+
+
+def _resolve_compose_command() -> list[str] | None:
+    docker_path = shutil.which("docker")
+    if docker_path and _command_available([docker_path, "compose", "version"]):
+        return [docker_path, "compose"]
+
+    docker_compose_path = shutil.which("docker-compose")
+    if docker_compose_path and _command_available([docker_compose_path, "version"]):
+        return [docker_compose_path]
+
+    return None
+
+
+def _is_bind_mount(volume: object) -> bool:
+    if isinstance(volume, str):
+        source = volume.split(":", 1)[0].strip()
+        return source.startswith((".", "/", "~"))
+    if isinstance(volume, dict):
+        mount_type = str(volume.get("type", "")).lower()
+        source = str(volume.get("source", "")).strip()
+        return mount_type == "bind" or source.startswith((".", "/", "~"))
+    return False
+
+
+def _prepare_runtime_compose_file(project_dir: Path) -> tuple[Path, bool]:
+    compose_path = project_dir / "docker-compose.yml"
+    if not compose_path.exists():
+        return compose_path, False
+
+    payload = yaml.safe_load(compose_path.read_text(encoding="utf-8")) or {}
+    services = payload.get("services")
+    if not isinstance(services, dict):
+        return compose_path, False
+
+    changed = False
+    for service in services.values():
+        if not isinstance(service, dict) or "volumes" not in service:
+            continue
+        volumes = service.get("volumes") or []
+        if not isinstance(volumes, list):
+            continue
+        filtered_volumes = [volume for volume in volumes if not _is_bind_mount(volume)]
+        if len(filtered_volumes) != len(volumes):
+            changed = True
+            if filtered_volumes:
+                service["volumes"] = filtered_volumes
+            else:
+                service.pop("volumes", None)
+
+    if not changed:
+        return compose_path, False
+
+    runtime_compose_path = project_dir / ".codex-runtime.compose.yml"
+    runtime_compose_path.write_text(
+        yaml.safe_dump(payload, allow_unicode=True, sort_keys=False),
+        encoding="utf-8",
+    )
+    return runtime_compose_path, True
 
 
 def _detect_runtime_urls(project_dir: Path, fallback_preview_url: str | None) -> tuple[str | None, str | None]:
@@ -21,7 +94,7 @@ def _detect_runtime_urls(project_dir: Path, fallback_preview_url: str | None) ->
         return fallback_preview_url, None
 
     content = compose_path.read_text(encoding="utf-8")
-    preview_url = fallback_preview_url
+    preview_url = None
     api_url = None
     for line in content.splitlines():
         stripped = line.strip().strip('"').strip("'")
@@ -62,16 +135,75 @@ def _compose_service_states(compose_command: list[str], project_dir: Path) -> tu
     return states, ""
 
 
+def _compose_services(compose_command: list[str], project_dir: Path) -> tuple[list[dict], str]:
+    ps_command = [*compose_command, "ps", "--format", "json"]
+    result = subprocess.run(
+        ps_command,
+        cwd=project_dir,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        return [], result.stderr[-2000:] or result.stdout[-2000:]
+
+    services: list[dict] = []
+    for line in [line.strip() for line in result.stdout.splitlines() if line.strip()]:
+        try:
+            services.append(json.loads(line))
+        except json.JSONDecodeError:
+            continue
+    return services, ""
+
+
+def _urls_from_compose_runtime(compose_command: list[str], project_dir: Path) -> tuple[str | None, str | None]:
+    services, _ = _compose_services(compose_command, project_dir)
+    preview_url = None
+    backend_url = None
+
+    for service in services:
+        publishers = service.get("Publishers") or []
+        for publisher in publishers:
+            published_port = publisher.get("PublishedPort")
+            target_port = publisher.get("TargetPort")
+            if published_port is None or target_port is None:
+                continue
+            host_port = int(published_port)
+            container_port = int(target_port)
+            if host_port >= 1024 and container_port in {80, 3000, 4173, 5173} and preview_url is None:
+                preview_url = f"http://localhost:{host_port}"
+            if host_port >= 1024 and container_port in {8000, 8005, 8080} and backend_url is None:
+                backend_url = f"http://localhost:{host_port}"
+
+    return preview_url, backend_url
+
+
 def _check_http(url: str | None) -> tuple[bool, str]:
     if not url:
         return False, "missing_url"
     try:
         with urlopen(url, timeout=3) as response:  # noqa: S310
             return 200 <= response.status < 500, f"http_{response.status}"
+    except HTTPError as exc:
+        return exc.code < 500, f"http_{exc.code}"
     except URLError as exc:
         return False, str(exc.reason)
     except Exception as exc:  # noqa: BLE001
         return False, str(exc)
+
+
+def _check_backend_http(url: str | None) -> tuple[bool, str]:
+    if not url:
+        return False, "missing_url"
+
+    candidate_urls = [f"{url}/api/health", url, f"{url}/docs", f"{url}/openapi.json"]
+    last_check = "missing_url"
+    for candidate in candidate_urls:
+        ok, check = _check_http(candidate)
+        last_check = f"{candidate} -> {check}"
+        if ok:
+            return True, last_check
+    return False, last_check
 
 
 def _check_http_with_retry(url: str | None, attempts: int = 8, delay_seconds: float = 1.5) -> tuple[bool, str]:
@@ -90,7 +222,7 @@ def refresh_project_entry_runtime(entry: dict) -> dict:
     preview_url = entry.get("preview_url")
     backend_url = entry.get("backend_url")
     frontend_ok, frontend_check = _check_http(preview_url)
-    backend_ok, backend_check = _check_http(f"{backend_url}/api/health" if backend_url else None)
+    backend_ok, backend_check = _check_backend_http(backend_url)
 
     if frontend_ok and backend_ok:
         return {
@@ -116,11 +248,12 @@ def start_project_for_session(session_id: str) -> dict:
     if not project_dir.exists():
         raise FileNotFoundError(f"Project directory not found: {project_dir}")
 
+    compose_file, using_runtime_compose = _prepare_runtime_compose_file(project_dir)
+
+    compose_base = _resolve_compose_command()
     compose_command: list[str] | None = None
-    if shutil.which("docker"):
-        compose_command = ["docker", "compose", "-p", session.project_slug]
-    elif shutil.which("docker-compose"):
-        compose_command = ["docker-compose", "-p", session.project_slug]
+    if compose_base is not None:
+        compose_command = [*compose_base, "-p", session.project_slug, "-f", str(compose_file)]
 
     if compose_command is None:
         raise RuntimeError("docker 或 docker-compose 不可用，无法启动项目。")
@@ -130,7 +263,12 @@ def start_project_for_session(session_id: str) -> dict:
         session_id,
         "project",
         "start_command_started",
-        {"command": build_and_up_command, "cwd": str(project_dir)},
+        {
+            "command": build_and_up_command,
+            "cwd": str(project_dir),
+            "compose_file": str(compose_file),
+            "using_runtime_compose": using_runtime_compose,
+        },
     )
     result = subprocess.run(
         build_and_up_command,
@@ -188,6 +326,9 @@ def start_project_for_session(session_id: str) -> dict:
     service_state_error = ""
     if result.returncode == 0:
         service_states, service_state_error = _compose_service_states(compose_command, project_dir)
+        runtime_preview_url, runtime_backend_url = _urls_from_compose_runtime(compose_command, project_dir)
+        preview_url = runtime_preview_url or preview_url
+        backend_url = runtime_backend_url or backend_url
 
     runtime_status = "running" if result.returncode == 0 else "failed"
     failure_reason = None
@@ -204,8 +345,11 @@ def start_project_for_session(session_id: str) -> dict:
             failure_reason = "compose_start_failed"
     else:
         unhealthy_services = {name: state for name, state in service_states.items() if "running" not in state.lower()}
-        frontend_ok, frontend_check = _check_http_with_retry(preview_url)
-        backend_ok, backend_check = _check_http_with_retry(f"{backend_url}/api/health" if backend_url else None)
+        has_explicit_preview = preview_url is not None
+        frontend_ok, frontend_check = _check_http_with_retry(preview_url) if has_explicit_preview else (True, "preview_not_required")
+        backend_ok, backend_check = _check_http_with_retry(backend_url, attempts=8, delay_seconds=1.5)
+        if not backend_ok:
+            backend_ok, backend_check = _check_backend_http(backend_url)
         if unhealthy_services:
             runtime_status = "failed"
             failure_reason = "services_not_running"

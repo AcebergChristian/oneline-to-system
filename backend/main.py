@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import json
 from contextlib import asynccontextmanager
+from pathlib import Path
 from time import perf_counter
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 import uvicorn
 
 from utils.agent import build_session, persist_stream, stream_agent_run
@@ -16,6 +18,9 @@ from utils.project_tools import run_tool_action
 from utils.project_runner import refresh_project_entry_runtime, start_project_for_session
 from utils.schemas import ChatRequest, Message, SessionCreateRequest, StepEvent, ToolAction
 from utils.storage import append_message, append_step, list_sessions, load_project_meta, load_session, save_project_meta
+
+
+FRONTEND_DIST_DIR = Path(__file__).resolve().parents[1] / "frontend" / "dist"
 
 
 @asynccontextmanager
@@ -32,6 +37,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+if FRONTEND_DIST_DIR.exists():
+    app.mount("/assets", StaticFiles(directory=FRONTEND_DIST_DIR / "assets"), name="frontend-assets")
 
 
 @app.middleware("http")
@@ -194,6 +202,19 @@ def get_config():
         "frontend_port": settings.frontend_port,
         "backend_port": settings.backend_port,
     }
+
+
+@app.get("/{full_path:path}", include_in_schema=False)
+def serve_frontend(full_path: str):
+    if not FRONTEND_DIST_DIR.exists():
+        raise HTTPException(status_code=404, detail="Frontend build not found")
+    requested = FRONTEND_DIST_DIR / full_path
+    if full_path and requested.is_file():
+        return FileResponse(requested)
+    index_file = FRONTEND_DIST_DIR / "index.html"
+    if index_file.exists():
+        return FileResponse(index_file)
+    raise HTTPException(status_code=404, detail="Frontend build not found")
 
 
 if __name__ == "__main__":

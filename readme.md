@@ -128,6 +128,26 @@ npm run dev
 5. 点击「启动项目」，通过 Docker Compose 启动生成的项目
 6. 在右侧预览面板查看生成结果
 
+## Docker 部署
+
+根目录已经提供 `Dockerfile` 和 `docker-compose.yml`。容器会先构建 `frontend`，再由 `backend` 统一托管前端静态文件与 `/api` 接口。
+
+```bash
+docker compose up --build
+```
+
+启动后直接访问：
+
+```text
+http://localhost:8000
+```
+
+说明：
+
+- 前端不再单独暴露端口，生产环境走同域部署
+- FastAPI 统一提供前端 build 产物和后端 API
+- `docker-compose.yml` 默认读取根目录 `.env`
+
 ## 环境变量说明
 
 | 变量 | 说明 | 默认值 |
