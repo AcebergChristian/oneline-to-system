@@ -29,6 +29,18 @@ class Settings(BaseSettings):
     project_runtime_mode: str = "local"
     project_preview_url_template: str = ""
     project_backend_url_template: str = ""
+    render_api_key: str = ""
+    render_owner_id: str = ""
+    render_repo_url: str = ""
+    render_repo_branch: str = ""
+    render_region: str = "oregon"
+    render_service_plan: str = "starter"
+    render_auto_deploy: bool = True
+    render_auto_create: bool = False
+    render_git_push_enabled: bool = False
+    render_git_remote_url: str = ""
+    render_git_author_name: str = "Oneline Render Bot"
+    render_git_author_email: str = "render-bot@example.com"
 
     model_config = SettingsConfigDict(
         env_file=str(ROOT_DIR / ".env"),

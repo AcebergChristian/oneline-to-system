@@ -157,17 +157,34 @@ PUBLIC_BASE_URL=https://oneline-to-system.onrender.com
 PROJECT_RUNTIME_MODE=external
 PROJECT_PREVIEW_URL_TEMPLATE=https://{project_slug}-frontend.onrender.com
 PROJECT_BACKEND_URL_TEMPLATE=https://{project_slug}-api.onrender.com
+RENDER_AUTO_CREATE=true
+RENDER_API_KEY=...
+RENDER_OWNER_ID=...
+RENDER_REPO_URL=https://github.com/your-org/your-repo
+RENDER_REPO_BRANCH=main
+RENDER_GIT_PUSH_ENABLED=true
+RENDER_GIT_REMOTE_URL=https://<token>@github.com/your-org/your-repo.git
 ```
 
 说明：
 
 - `PROJECT_RUNTIME_MODE=external` 时，“启动项目”会变成检查公网部署状态，不再调用本地 `docker compose`
+- `RENDER_AUTO_CREATE=true` 时，点击“启动项目”会改成：
+  - 先把当前 `project/projectN` 推送到指定 Git 分支
+  - 再调用 Render API 自动创建 `projectN-frontend` 和 `projectN-api` 两个独立 service
+  - 然后把返回的真实公网地址保存到项目元数据
 - `PROJECT_PREVIEW_URL_TEMPLATE` 和 `PROJECT_BACKEND_URL_TEMPLATE` 支持占位符：
   - `{project_slug}`
   - `{project_index}`
   - `{port_preview}`
   - `{port_backend}`
-- 主控会把项目元数据里的 `preview_url` / `backend_url` 自动按模板生成并展示给前端
+- 主控最终会把 `/{project_slug}` 和 `/{project_slug}/api` 反向代理到这些独立服务
+
+注意：
+
+- Render 创建 service 时只能从 Git 仓库拉代码，拿不到主控实例本地临时写出的文件
+- 所以“AI 生成后自动创建独立 Render service”这条链路，必须配合 Git 推送
+- 如果不配置 `RENDER_GIT_PUSH_ENABLED=true` 与 `RENDER_GIT_REMOTE_URL`，自动建 service 只能用于仓库里已经存在并已推送的项目目录
 
 ## 环境变量说明
 

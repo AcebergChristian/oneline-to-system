@@ -14,6 +14,13 @@ import yaml
 
 from .config import PROJECT_ROOT, get_settings
 from .logger import log_session_event
+from .render_deploy import (
+    RenderConfigError,
+    RenderDeployError,
+    ensure_render_project_services,
+    render_autocreate_enabled,
+)
+from .repo_sync import RepoSyncError, sync_project_to_render_branch
 from .storage import append_project_run, load_session, upsert_project_meta
 
 
@@ -310,24 +317,130 @@ def _check_backend_http_with_retry(url: str | None, attempts: int = 8, delay_sec
 
 
 def _external_runtime_payload(session, project_dir: Path) -> dict:
+    settings = get_settings()
     preview_url = session.preview_url
     backend_url = session.backend_url
+    if not preview_url and settings.project_preview_url_template:
+        preview_url = _format_project_url(settings.project_preview_url_template, session.project_slug)
+    if not backend_url and settings.project_backend_url_template:
+        backend_url = _format_project_url(settings.project_backend_url_template, session.project_slug)
+
+    render_services: dict[str, dict] = {}
+    if render_autocreate_enabled():
+        try:
+            sync_result = sync_project_to_render_branch(session.project_slug)
+            services = ensure_render_project_services(session.project_slug)
+            frontend_service = services["frontend"]
+            backend_service = services["backend"]
+            preview_url = frontend_service.url or preview_url
+            backend_url = backend_service.url or backend_url
+            render_services = {
+                "frontend": {
+                    "service_id": frontend_service.id,
+                    "service_name": frontend_service.name,
+                    "service_url": frontend_service.url,
+                    "dashboard_url": frontend_service.dashboard_url,
+                },
+                "backend": {
+                    "service_id": backend_service.id,
+                    "service_name": backend_service.name,
+                    "service_url": backend_service.url,
+                    "dashboard_url": backend_service.dashboard_url,
+                },
+            }
+            if frontend_service.created_now or backend_service.created_now:
+                return {
+                    "session_id": session.id,
+                    "project_slug": session.project_slug,
+                    "path": str(project_dir.relative_to(PROJECT_ROOT.parent)),
+                    "preview_url": preview_url,
+                    "backend_url": backend_url,
+                    "runtime_status": "provisioning",
+                    "started_at": datetime.utcnow().isoformat(),
+                    "command": ["render-create-services"],
+                    "returncode": 0,
+                    "stdout": (
+                        f"repo_sync={sync_result.get('status')} {sync_result.get('detail', '')}\n"
+                        f"frontend_service={frontend_service.name} {frontend_service.url or 'pending'}\n"
+                        f"backend_service={backend_service.name} {backend_service.url or 'pending'}"
+                    ),
+                    "stderr": "",
+                    "failure_reason": None,
+                    "service_states": {"deployment": "render_provisioning"},
+                    "service_state_error": "",
+                    "render_services": render_services,
+                }
+        except RepoSyncError as exc:
+            return {
+                "session_id": session.id,
+                "project_slug": session.project_slug,
+                "path": str(project_dir.relative_to(PROJECT_ROOT.parent)),
+                "preview_url": preview_url,
+                "backend_url": backend_url,
+                "runtime_status": "failed",
+                "started_at": datetime.utcnow().isoformat(),
+                "command": ["git-push-render-branch"],
+                "returncode": 1,
+                "stdout": "",
+                "stderr": str(exc),
+                "failure_reason": "render_repo_sync_failed",
+                "service_states": {"deployment": "render_repo_sync_failed"},
+                "service_state_error": "",
+            }
+        except RenderConfigError as exc:
+            return {
+                "session_id": session.id,
+                "project_slug": session.project_slug,
+                "path": str(project_dir.relative_to(PROJECT_ROOT.parent)),
+                "preview_url": preview_url,
+                "backend_url": backend_url,
+                "runtime_status": "failed",
+                "started_at": datetime.utcnow().isoformat(),
+                "command": ["render-create-services"],
+                "returncode": 1,
+                "stdout": "",
+                "stderr": str(exc),
+                "failure_reason": "render_config_missing",
+                "service_states": {"deployment": "render_unconfigured"},
+                "service_state_error": "",
+            }
+        except RenderDeployError as exc:
+            return {
+                "session_id": session.id,
+                "project_slug": session.project_slug,
+                "path": str(project_dir.relative_to(PROJECT_ROOT.parent)),
+                "preview_url": preview_url,
+                "backend_url": backend_url,
+                "runtime_status": "failed",
+                "started_at": datetime.utcnow().isoformat(),
+                "command": ["render-create-services"],
+                "returncode": 1,
+                "stdout": "",
+                "stderr": str(exc),
+                "failure_reason": "render_service_create_failed",
+                "service_states": {"deployment": "render_create_failed"},
+                "service_state_error": "",
+            }
+
     if not preview_url or not backend_url:
+        runtime_status = "provisioning" if render_services else "failed"
+        failure_reason = None if render_services else "deployment_url_missing"
         return {
             "session_id": session.id,
             "project_slug": session.project_slug,
             "path": str(project_dir.relative_to(PROJECT_ROOT.parent)),
             "preview_url": preview_url,
             "backend_url": backend_url,
-            "runtime_status": "failed",
+            "runtime_status": runtime_status,
             "started_at": datetime.utcnow().isoformat(),
-            "command": ["external-healthcheck"],
-            "returncode": 1,
+            "command": ["render-create-services" if render_services else "external-healthcheck"],
+            "returncode": 0 if render_services else 1,
             "stdout": "preview_check=missing_url\nbackend_check=missing_url",
             "stderr": "",
-            "failure_reason": "deployment_url_missing",
-            "service_states": {"deployment": "external"},
+            "failure_reason": failure_reason,
+            "service_states": {"deployment": "render_provisioning" if render_services else "external"},
             "service_state_error": "",
+            "render_services": render_services,
         }
 
     frontend_ok, frontend_check = _check_preview_http_with_retry(preview_url, attempts=6, delay_seconds=2.0)
@@ -357,6 +470,7 @@ def _external_runtime_payload(session, project_dir: Path) -> dict:
         "failure_reason": failure_reason,
         "service_states": {"deployment": "external"},
         "service_state_error": "",
+        "render_services": render_services,
     }
 
 

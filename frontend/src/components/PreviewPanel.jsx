@@ -17,11 +17,35 @@ function buildFailureDetail(project, runtimeMode) {
     : '未拿到容器状态'
 
   if (runtimeMode === 'external') {
+    if (failureReason === 'render_config_missing') {
+      return {
+        title: 'Render 自动部署未配置',
+        detail: '主控已经切到独立 Render service 模式，但服务端还缺少 Render API 配置，无法自动创建项目服务。',
+        prompt: '请为主控配置 RENDER_API_KEY、RENDER_OWNER_ID、RENDER_REPO_URL，并确认已开启 RENDER_AUTO_CREATE，然后重新部署主控并再次点击部署项目。',
+      }
+    }
+
+    if (failureReason === 'render_service_create_failed') {
+      return {
+        title: 'Render 服务创建失败',
+        detail: '主控已尝试调用 Render API 创建当前项目的前后端服务，但创建请求失败。',
+        prompt: '请检查 Render API 配置、workspace 权限、仓库地址、分支和项目目录结构，修复后再次点击部署项目。',
+      }
+    }
+
+    if (failureReason === 'render_repo_sync_failed') {
+      return {
+        title: 'Git 同步失败',
+        detail: 'Render 创建独立 service 时只能从 Git 仓库拉代码。主控已尝试把当前 project 推送到目标分支，但推送失败了。',
+        prompt: '请检查 RENDER_GIT_REMOTE_URL、RENDER_REPO_BRANCH 和 Git 推送权限，确认主控能把当前 project 推送到远端仓库，然后再次点击部署项目。',
+      }
+    }
+
     if (failureReason === 'deployment_url_missing') {
       return {
         title: '部署地址还没登记完整',
-        detail: '当前是 Render 独立服务模式。主控不会再启动 Docker 子项目，必须先保存真实的前端和后端公网地址。',
-        prompt: '请检查当前 project 的独立部署状态，确认 frontend 和 backend 已分别部署成功，并把真实公网地址保存到部署地址输入框里，然后重新检查部署。',
+        detail: '当前是 Render 独立服务模式。自动创建未完成时，至少需要有真实的前端和后端公网地址才能继续检查。',
+        prompt: '请检查当前 project 的独立部署状态，确认 frontend 和 backend 已分别部署成功；如果主控未自动回填地址，就把真实公网地址保存到部署地址输入框里，然后重新检查部署。',
       }
     }
 
@@ -237,7 +261,13 @@ export function PreviewPanel({
             <div className="mt-4 space-y-3 rounded-2xl border border-white/10 bg-black/20 p-3">
               <div className="text-xs uppercase tracking-[0.2em] text-fog/70">Deployment URLs</div>
               <div className="text-xs text-fog/70">
-                这里保存真实 Render service 地址。对外预览仍然走当前域名下的 `/{session?.project_slug || 'projectN'}` 和 `/{session?.project_slug || 'projectN'}/api`。
+                外部模式下，点击上面的按钮会优先让主控自动创建 `{project_slug}-frontend` 和 `{project_slug}-api` 两个 Render service。
+              </div>
+              <div className="text-xs text-fog/70">
+                如果这些 project 是 AI 在运行时新写出来的，主控还需要先把 `project/${session?.project_slug || 'projectN'}` 推到 Git 分支，Render 才能拉到源码。下面输入框是手动覆盖入口。
+              </div>
+              <div className="text-xs text-fog/70">
+                对外预览仍然走当前域名下的 `/{session?.project_slug || 'projectN'}` 和 `/{session?.project_slug || 'projectN'}/api`。
               </div>
               <input
                 type="url"
@@ -277,7 +307,7 @@ export function PreviewPanel({
               className="flex items-center gap-2 rounded-2xl bg-ember px-4 py-3 text-sm font-medium text-white disabled:opacity-60"
             >
               <Play size={16} />
-              {startingProject ? (runtimeMode === 'external' ? '检查中...' : '启动中...') : runtimeMode === 'external' ? '检查部署' : '启动项目'}
+              {startingProject ? (runtimeMode === 'external' ? '处理中...' : '启动中...') : runtimeMode === 'external' ? '部署/检查项目' : '启动项目'}
             </button>
             {previewUrl ? (
               <a

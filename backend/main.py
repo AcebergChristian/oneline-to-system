@@ -189,9 +189,10 @@ def start_project(session_id: str):
     try:
         log_session_event(session_id, "api", "project_start_requested", {})
         result = start_project_for_session(session_id)
-        step_type = "status" if result.get("runtime_status") == "running" else "error"
+        runtime_status = result.get("runtime_status")
+        step_type = "status" if runtime_status in {"running", "provisioning"} else "error"
         summary = (
-            f"项目启动结果: {result.get('runtime_status')}.\n"
+            f"项目启动结果: {runtime_status}.\n"
             f"预览地址: {result.get('preview_url') or '无'}\n"
             f"失败原因: {result.get('failure_reason') or '无'}\n"
             f"stderr: {(result.get('stderr') or '')[-800:]}\n"
@@ -201,7 +202,7 @@ def start_project(session_id: str):
         append_step(
             session_id,
             StepEvent(type=step_type, content=summary, metadata=result),
-            status="running" if result.get("runtime_status") == "running" else "error",
+            status="running" if runtime_status in {"running", "provisioning"} else "error",
         )
         return result
     except FileNotFoundError as exc:
@@ -256,6 +257,9 @@ def get_config():
         "project_runtime_mode": settings.project_runtime_mode,
         "project_preview_url_template": settings.project_preview_url_template,
         "project_backend_url_template": settings.project_backend_url_template,
+        "render_auto_create": settings.render_auto_create,
+        "render_configured": bool(settings.render_api_key and settings.render_owner_id and settings.render_repo_url),
+        "render_git_push_enabled": settings.render_git_push_enabled,
     }
 
 
