@@ -4,6 +4,7 @@ import json
 from contextlib import asynccontextmanager
 from pathlib import Path
 from time import perf_counter
+from urllib.parse import urlsplit
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -215,10 +216,13 @@ def start_project(session_id: str):
 
 
 @app.patch("/api/projects/{session_id}")
-def update_project_deployment(session_id: str, payload: ProjectDeploymentUpdate):
+def update_project_deployment(session_id: str, payload: ProjectDeploymentUpdate, request: Request):
     session = load_session(session_id)
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found")
+
+    preview_url = _validate_external_deployment_url(payload.preview_url, request)
+    backend_url = _validate_external_deployment_url(payload.backend_url, request)
 
     existing = get_project_meta(session_id) or {
         "session_id": session.id,
@@ -228,8 +232,8 @@ def update_project_deployment(session_id: str, payload: ProjectDeploymentUpdate)
     }
     updated = {
         **existing,
-        "preview_url": payload.preview_url or existing.get("preview_url") or session.preview_url,
-        "backend_url": payload.backend_url or existing.get("backend_url") or session.backend_url,
+        "preview_url": preview_url or existing.get("preview_url") or session.preview_url,
+        "backend_url": backend_url or existing.get("backend_url") or session.backend_url,
     }
     upsert_project_meta(updated)
     log_session_event(
@@ -290,6 +294,25 @@ def _project_target_by_slug_or_404(project_slug: str, field: str) -> str:
     return str(target).rstrip("/")
 
 
+def _validate_external_deployment_url(url: str | None, request: Request) -> str | None:
+    if not url:
+        return None
+
+    normalized = url.strip().rstrip("/")
+    parsed = urlsplit(normalized)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise HTTPException(status_code=400, detail="部署地址必须是完整的 http/https URL。")
+
+    public_parsed = urlsplit(_public_base_url(request))
+    if parsed.scheme == public_parsed.scheme and parsed.netloc == public_parsed.netloc and parsed.path.startswith("/project"):
+        raise HTTPException(
+            status_code=400,
+            detail="请保存真实项目服务地址，不要保存主控代理地址。应填写类似 https://project6-frontend.onrender.com 和 https://project6-api.onrender.com。",
+        )
+
+    return normalized
+
+
 def _join_target_url(base_url: str, path: str, query: str) -> str:
     suffix = f"/{path}" if path else ""
     target_url = f"{base_url}{suffix}"
@@ -306,7 +329,7 @@ def _should_rewrite_content(content_type: str) -> bool:
 def _rewrite_proxy_text(content: str, preview_proxy_url: str, backend_proxy_url: str, target_base_url: str) -> str:
     rewrites = [
         (f"{target_base_url}/api", f"{backend_proxy_url}/api"),
-        (target_base_url, backend_proxy_url),
+        (target_base_url, preview_proxy_url),
         ('"/static/', f'"{preview_proxy_url}/static/'),
         ("'/static/", f"'{preview_proxy_url}/static/"),
         ('"/assets/', f'"{preview_proxy_url}/assets/'),

@@ -625,7 +625,7 @@ export default function App() {
       pushMessage(`项目启动请求已发送，状态：${result.runtime_status || 'unknown'}。`)
       setShowFailureAnalysis(result.runtime_status === 'failed')
       const projectPreviewUrl = getProjectPreviewUrl({ ...result, session_id: activeSessionId }, { id: activeSessionId })
-      if (projectPreviewUrl) {
+      if (result.runtime_status === 'running' && projectPreviewUrl) {
         window.open(projectPreviewUrl, '_blank', 'noopener,noreferrer')
       }
     } catch (error) {

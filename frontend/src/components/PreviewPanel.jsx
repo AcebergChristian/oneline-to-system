@@ -2,7 +2,7 @@ import React from 'react'
 import { ExternalLink, FolderTree, MonitorSmartphone, Play } from 'lucide-react'
 import { getProjectBackendUrl, getProjectPreviewUrl } from '../lib/projectUrls'
 
-function buildFailureDetail(project) {
+function buildFailureDetail(project, runtimeMode) {
   const stderr = project?.stderr || ''
   const stdout = project?.stdout || ''
   const failureReason = project?.failure_reason || ''
@@ -15,6 +15,38 @@ function buildFailureDetail(project) {
         .map(([name, state]) => `${name}: ${state}`)
         .join(' / ')
     : '未拿到容器状态'
+
+  if (runtimeMode === 'external') {
+    if (failureReason === 'deployment_url_missing') {
+      return {
+        title: '部署地址还没登记完整',
+        detail: '当前是 Render 独立服务模式。主控不会再启动 Docker 子项目，必须先保存真实的前端和后端公网地址。',
+        prompt: '请检查当前 project 的独立部署状态，确认 frontend 和 backend 已分别部署成功，并把真实公网地址保存到部署地址输入框里，然后重新检查部署。',
+      }
+    }
+
+    if (failureReason === 'backend_unreachable') {
+      return {
+        title: '后端部署地址不可达',
+        detail: `已登记的后端地址 ${backendUrl} 健康检查失败，说明独立后端服务没有真正对外可用。`,
+        prompt: `请检查当前 project 的独立 backend 服务部署、启动命令、端口和健康检查路径，确认 ${backendUrl} 可访问后再重新检查部署。`,
+      }
+    }
+
+    if (failureReason === 'frontend_unreachable') {
+      return {
+        title: '前端部署地址不可达',
+        detail: `已登记的前端地址 ${previewUrl} 无法访问，说明独立 frontend 服务没有真正对外可用。`,
+        prompt: `请检查当前 project 的独立 frontend 服务部署、构建产物和根路由，确认 ${previewUrl} 可访问后再重新检查部署。`,
+      }
+    }
+
+    return {
+      title: '部署检查失败',
+      detail: '主控代理正常，但登记的独立项目服务还没有对外可用，具体错误见下方日志。',
+      prompt: '请检查当前 project 的独立 frontend/backend 服务部署日志和公网地址配置，修复后再重新检查部署。',
+    }
+  }
 
   if (combined.includes('No such image')) {
     return {
@@ -130,10 +162,14 @@ export function PreviewPanel({
   const runtimeStatus = project?.runtime_status || 'idle'
   const previewUrl = getProjectPreviewUrl(project, session)
   const backendUrl = getProjectBackendUrl(project, session)
+  const upstreamPreviewUrl = project?.preview_url || session?.preview_url || ''
+  const upstreamBackendUrl = project?.backend_url || session?.backend_url || ''
   const hasFailedStart = Boolean(
     showFailureAnalysis && project?.started_at && runtimeStatus === 'failed' && (project?.stdout || project?.stderr),
   )
-  const failureDetail = hasFailedStart ? buildFailureDetail({ ...project, preview_url: previewUrl, backend_url: backendUrl }) : null
+  const failureDetail = hasFailedStart
+    ? buildFailureDetail({ ...project, preview_url: previewUrl, backend_url: backendUrl }, runtimeMode)
+    : null
 
   return (
     <section className="flex h-auto flex-col border-t border-white/10 bg-black/20 lg:h-full lg:border-l lg:border-t-0">
@@ -200,20 +236,29 @@ export function PreviewPanel({
           {runtimeMode === 'external' ? (
             <div className="mt-4 space-y-3 rounded-2xl border border-white/10 bg-black/20 p-3">
               <div className="text-xs uppercase tracking-[0.2em] text-fog/70">Deployment URLs</div>
+              <div className="text-xs text-fog/70">
+                这里保存真实 Render service 地址。对外预览仍然走当前域名下的 `/{session?.project_slug || 'projectN'}` 和 `/{session?.project_slug || 'projectN'}/api`。
+              </div>
               <input
                 type="url"
                 value={deploymentDraft?.preview_url || ''}
                 onChange={(event) => onDeploymentDraftChange?.('preview_url', event.target.value)}
-                placeholder="https://your-frontend.onrender.com"
+                placeholder="真实前端地址，例如 https://project6-frontend.onrender.com"
                 className="w-full rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-sand outline-none placeholder:text-fog/50"
               />
               <input
                 type="url"
                 value={deploymentDraft?.backend_url || ''}
                 onChange={(event) => onDeploymentDraftChange?.('backend_url', event.target.value)}
-                placeholder="https://your-backend.onrender.com"
+                placeholder="真实后端地址，例如 https://project6-api.onrender.com"
                 className="w-full rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-sand outline-none placeholder:text-fog/50"
               />
+              <div className="text-xs text-fog/70">
+                当前上游前端：{upstreamPreviewUrl || '未保存'}
+              </div>
+              <div className="text-xs text-fog/70">
+                当前上游后端：{upstreamBackendUrl || '未保存'}
+              </div>
               <button
                 type="button"
                 onClick={onSaveDeployment}

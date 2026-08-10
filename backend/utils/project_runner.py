@@ -7,6 +7,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 import re
+from urllib.parse import urlsplit
 from urllib.error import HTTPError, URLError
 from urllib.request import urlopen
 import yaml
@@ -51,9 +52,9 @@ def _normalize_project_urls(entry: dict) -> dict:
         return entry
 
     normalized = dict(entry)
-    if settings.project_preview_url_template:
+    if settings.project_preview_url_template and not normalized.get("preview_url"):
         normalized["preview_url"] = _format_project_url(settings.project_preview_url_template, project_slug)
-    if settings.project_backend_url_template:
+    if settings.project_backend_url_template and not normalized.get("backend_url"):
         normalized["backend_url"] = _format_project_url(settings.project_backend_url_template, project_slug)
     return normalized
 
@@ -239,7 +240,30 @@ def _check_backend_http(url: str | None) -> tuple[bool, str]:
     if not url:
         return False, "missing_url"
 
-    candidate_urls = [f"{url}/api/health", url, f"{url}/docs", f"{url}/openapi.json"]
+    normalized = url.rstrip("/")
+    parsed = urlsplit(normalized)
+    base_path = parsed.path.rstrip("/")
+
+    candidate_urls: list[str] = []
+    if base_path.endswith("/api"):
+        candidate_urls.extend(
+            [
+                f"{normalized}/health",
+                normalized,
+                f"{normalized}/docs",
+                f"{normalized}/openapi.json",
+            ]
+        )
+    else:
+        candidate_urls.extend(
+            [
+                f"{normalized}/api/health",
+                normalized,
+                f"{normalized}/docs",
+                f"{normalized}/openapi.json",
+            ]
+        )
+
     last_check = "missing_url"
     for candidate in candidate_urls:
         ok, check = _check_http(candidate)
@@ -273,11 +297,41 @@ def _check_preview_http_with_retry(url: str | None, attempts: int = 8, delay_sec
     return False, last_check
 
 
+def _check_backend_http_with_retry(url: str | None, attempts: int = 8, delay_seconds: float = 1.5) -> tuple[bool, str]:
+    last_check = "missing_url"
+    for attempt in range(attempts):
+        ok, check = _check_backend_http(url)
+        last_check = check
+        if ok:
+            return True, check
+        if attempt < attempts - 1:
+            time.sleep(delay_seconds)
+    return False, last_check
+
+
 def _external_runtime_payload(session, project_dir: Path) -> dict:
     preview_url = session.preview_url
     backend_url = session.backend_url
-    frontend_ok, frontend_check = _check_preview_http_with_retry(preview_url, attempts=4, delay_seconds=1.0)
-    backend_ok, backend_check = _check_backend_http(backend_url)
+    if not preview_url or not backend_url:
+        return {
+            "session_id": session.id,
+            "project_slug": session.project_slug,
+            "path": str(project_dir.relative_to(PROJECT_ROOT.parent)),
+            "preview_url": preview_url,
+            "backend_url": backend_url,
+            "runtime_status": "failed",
+            "started_at": datetime.utcnow().isoformat(),
+            "command": ["external-healthcheck"],
+            "returncode": 1,
+            "stdout": "preview_check=missing_url\nbackend_check=missing_url",
+            "stderr": "",
+            "failure_reason": "deployment_url_missing",
+            "service_states": {"deployment": "external"},
+            "service_state_error": "",
+        }
+
+    frontend_ok, frontend_check = _check_preview_http_with_retry(preview_url, attempts=6, delay_seconds=2.0)
+    backend_ok, backend_check = _check_backend_http_with_retry(backend_url, attempts=6, delay_seconds=2.0)
 
     runtime_status = "running"
     failure_reason = None
