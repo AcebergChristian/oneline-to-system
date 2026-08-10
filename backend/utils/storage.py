@@ -134,6 +134,13 @@ def get_project_meta(session_id: str) -> dict[str, Any] | None:
     return None
 
 
+def get_project_meta_by_slug(project_slug: str) -> dict[str, Any] | None:
+    for entry in load_project_meta():
+        if entry.get("project_slug") == project_slug:
+            return entry
+    return None
+
+
 def upsert_project_meta(entry: dict[str, Any]) -> list[dict[str, Any]]:
     entries = load_project_meta()
     replaced = False

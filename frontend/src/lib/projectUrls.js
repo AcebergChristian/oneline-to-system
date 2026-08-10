@@ -3,13 +3,21 @@ function isLocalBrowser() {
   return hostname === 'localhost' || hostname === '127.0.0.1'
 }
 
-function maybeProxyUrl(kind, sessionId, rawUrl) {
-  if (!rawUrl || !sessionId || isLocalBrowser()) return rawUrl || null
+function canUseControllerProxy() {
+  if (!isLocalBrowser()) return true
+  return window.location.port === '8000'
+}
+
+function maybeProxyUrl(kind, projectSlug, rawUrl) {
+  if (!rawUrl) return null
+  if (!projectSlug || !canUseControllerProxy()) return rawUrl
 
   try {
     const parsed = new URL(rawUrl)
     if (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') {
-      return `${window.location.origin}/${kind}/${sessionId}`
+      return kind === 'preview'
+        ? `${window.location.origin}/${projectSlug}`
+        : `${window.location.origin}/${projectSlug}/api`
     }
   } catch {
     return rawUrl
@@ -19,12 +27,12 @@ function maybeProxyUrl(kind, sessionId, rawUrl) {
 }
 
 export function getProjectPreviewUrl(project, session) {
-  const sessionId = session?.id || project?.session_id
+  const projectSlug = project?.project_slug || session?.project_slug
   const rawUrl = project?.preview_url || session?.preview_url
-  return maybeProxyUrl('project-preview', sessionId, rawUrl)
+  return maybeProxyUrl('preview', projectSlug, rawUrl)
 }
 
 export function getProjectBackendUrl(project, session) {
-  const sessionId = session?.id || project?.session_id
-  return maybeProxyUrl('project-api', sessionId, project?.backend_url)
+  const projectSlug = project?.project_slug || session?.project_slug
+  return maybeProxyUrl('api', projectSlug, project?.backend_url)
 }

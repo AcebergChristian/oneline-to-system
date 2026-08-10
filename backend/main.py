@@ -22,6 +22,7 @@ from utils.storage import (
     append_message,
     append_step,
     get_project_meta,
+    get_project_meta_by_slug,
     list_sessions,
     load_project_meta,
     load_session,
@@ -233,16 +234,26 @@ def _public_base_url(request: Request) -> str:
     return str(request.base_url).rstrip("/")
 
 
-def _project_proxy_urls(request: Request, session_id: str) -> tuple[str, str]:
+def _project_proxy_urls(request: Request, project_slug: str) -> tuple[str, str]:
     base_url = _public_base_url(request)
     return (
-        f"{base_url}/project-preview/{session_id}",
-        f"{base_url}/project-api/{session_id}",
+        f"{base_url}/{project_slug}",
+        f"{base_url}/{project_slug}/api",
     )
 
 
 def _project_target_or_404(session_id: str, field: str) -> str:
     project = get_project_meta(session_id)
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project metadata not found")
+    target = project.get(field)
+    if not target:
+        raise HTTPException(status_code=404, detail=f"Project {field} not found")
+    return str(target).rstrip("/")
+
+
+def _project_target_by_slug_or_404(project_slug: str, field: str) -> str:
+    project = get_project_meta_by_slug(project_slug)
     if project is None:
         raise HTTPException(status_code=404, detail="Project metadata not found")
     target = project.get(field)
@@ -290,11 +301,11 @@ def _rewrite_proxy_text(content: str, preview_proxy_url: str, backend_proxy_url:
 async def _proxy_request(
     request: Request,
     target_base_url: str,
-    session_id: str,
+    project_slug: str,
     path: str,
     rewrite_content: bool = False,
 ) -> Response:
-    preview_proxy_url, backend_proxy_url = _project_proxy_urls(request, session_id)
+    preview_proxy_url, backend_proxy_url = _project_proxy_urls(request, project_slug)
     target_url = _join_target_url(target_base_url, path, request.url.query)
     request_headers = {
         key: value
@@ -336,14 +347,36 @@ async def _proxy_request(
 @app.api_route("/project-preview/{session_id}/{path:path}", methods=PROXY_METHODS, include_in_schema=False)
 async def proxy_project_preview(session_id: str, request: Request, path: str = ""):
     target_base_url = _project_target_or_404(session_id, "preview_url")
-    return await _proxy_request(request, target_base_url, session_id, path, rewrite_content=True)
+    project = get_project_meta(session_id)
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project metadata not found")
+    return await _proxy_request(request, target_base_url, str(project.get("project_slug", "")), path, rewrite_content=True)
 
 
 @app.api_route("/project-api/{session_id}", methods=PROXY_METHODS, include_in_schema=False)
 @app.api_route("/project-api/{session_id}/{path:path}", methods=PROXY_METHODS, include_in_schema=False)
 async def proxy_project_api(session_id: str, request: Request, path: str = ""):
     target_base_url = _project_target_or_404(session_id, "backend_url")
-    return await _proxy_request(request, target_base_url, session_id, path, rewrite_content=False)
+    project = get_project_meta(session_id)
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project metadata not found")
+    return await _proxy_request(request, target_base_url, str(project.get("project_slug", "")), path, rewrite_content=False)
+
+
+@app.api_route("/project{project_index}/api", methods=PROXY_METHODS, include_in_schema=False)
+@app.api_route("/project{project_index}/api/{path:path}", methods=PROXY_METHODS, include_in_schema=False)
+async def proxy_project_api_by_slug(project_index: str, request: Request, path: str = ""):
+    project_slug = f"project{project_index}"
+    target_base_url = _project_target_by_slug_or_404(project_slug, "backend_url")
+    return await _proxy_request(request, target_base_url, project_slug, path, rewrite_content=False)
+
+
+@app.api_route("/project{project_index}", methods=PROXY_METHODS, include_in_schema=False)
+@app.api_route("/project{project_index}/{path:path}", methods=PROXY_METHODS, include_in_schema=False)
+async def proxy_project_preview_by_slug(project_index: str, request: Request, path: str = ""):
+    project_slug = f"project{project_index}"
+    target_base_url = _project_target_by_slug_or_404(project_slug, "preview_url")
+    return await _proxy_request(request, target_base_url, project_slug, path, rewrite_content=True)
 
 
 @app.get("/{full_path:path}", include_in_schema=False)
