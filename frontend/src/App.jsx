@@ -365,6 +365,7 @@ function Workspace({
   sessions,
   projects,
   isLoadingWorkspaceData,
+  runtimeMode,
   activeSessionId,
   activeSession,
   workspacePrompt,
