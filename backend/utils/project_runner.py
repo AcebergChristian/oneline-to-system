@@ -221,6 +221,20 @@ def _check_http(url: str | None) -> tuple[bool, str]:
         return False, str(exc)
 
 
+def _check_preview_http(url: str | None) -> tuple[bool, str]:
+    if not url:
+        return False, "missing_url"
+    try:
+        with urlopen(url, timeout=3) as response:  # noqa: S310
+            return 200 <= response.status < 400, f"http_{response.status}"
+    except HTTPError as exc:
+        return False, f"http_{exc.code}"
+    except URLError as exc:
+        return False, str(exc.reason)
+    except Exception as exc:  # noqa: BLE001
+        return False, str(exc)
+
+
 def _check_backend_http(url: str | None) -> tuple[bool, str]:
     if not url:
         return False, "missing_url"
@@ -247,10 +261,22 @@ def _check_http_with_retry(url: str | None, attempts: int = 8, delay_seconds: fl
     return False, last_check
 
 
+def _check_preview_http_with_retry(url: str | None, attempts: int = 8, delay_seconds: float = 1.5) -> tuple[bool, str]:
+    last_check = "missing_url"
+    for attempt in range(attempts):
+        ok, check = _check_preview_http(url)
+        last_check = check
+        if ok:
+            return True, check
+        if attempt < attempts - 1:
+            time.sleep(delay_seconds)
+    return False, last_check
+
+
 def _external_runtime_payload(session, project_dir: Path) -> dict:
     preview_url = session.preview_url
     backend_url = session.backend_url
-    frontend_ok, frontend_check = _check_http_with_retry(preview_url, attempts=4, delay_seconds=1.0)
+    frontend_ok, frontend_check = _check_preview_http_with_retry(preview_url, attempts=4, delay_seconds=1.0)
     backend_ok, backend_check = _check_backend_http(backend_url)
 
     runtime_status = "running"
@@ -284,7 +310,7 @@ def refresh_project_entry_runtime(entry: dict) -> dict:
     entry = _normalize_project_urls(entry)
     preview_url = entry.get("preview_url")
     backend_url = entry.get("backend_url")
-    frontend_ok, frontend_check = _check_http(preview_url)
+    frontend_ok, frontend_check = _check_preview_http(preview_url)
     backend_ok, backend_check = _check_backend_http(backend_url)
 
     if frontend_ok and backend_ok:
@@ -427,7 +453,9 @@ def start_project_for_session(session_id: str) -> dict:
     else:
         unhealthy_services = {name: state for name, state in service_states.items() if "running" not in state.lower()}
         has_explicit_preview = preview_url is not None
-        frontend_ok, frontend_check = _check_http_with_retry(preview_url) if has_explicit_preview else (True, "preview_not_required")
+        frontend_ok, frontend_check = (
+            _check_preview_http_with_retry(preview_url) if has_explicit_preview else (True, "preview_not_required")
+        )
         backend_ok, backend_check = _check_http_with_retry(backend_url, attempts=8, delay_seconds=1.5)
         if not backend_ok:
             backend_ok, backend_check = _check_backend_http(backend_url)
