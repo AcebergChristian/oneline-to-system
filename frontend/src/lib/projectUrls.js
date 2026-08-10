@@ -12,6 +12,12 @@ function maybeProxyUrl(kind, projectSlug, rawUrl) {
   if (!rawUrl) return null
   if (!projectSlug || !canUseControllerProxy()) return rawUrl
 
+  if (!isLocalBrowser()) {
+    return kind === 'preview'
+      ? `${window.location.origin}/${projectSlug}`
+      : `${window.location.origin}/${projectSlug}/api`
+  }
+
   try {
     const parsed = new URL(rawUrl)
     if (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') {
