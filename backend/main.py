@@ -7,8 +7,9 @@ from time import perf_counter
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+import httpx
 import uvicorn
 
 from utils.agent import build_session, persist_stream, stream_agent_run
@@ -17,7 +18,15 @@ from utils.logger import extract_session_id_from_request, log_session_event, log
 from utils.project_tools import run_tool_action
 from utils.project_runner import refresh_project_entry_runtime, start_project_for_session
 from utils.schemas import ChatRequest, Message, SessionCreateRequest, StepEvent, ToolAction
-from utils.storage import append_message, append_step, list_sessions, load_project_meta, load_session, save_project_meta
+from utils.storage import (
+    append_message,
+    append_step,
+    get_project_meta,
+    list_sessions,
+    load_project_meta,
+    load_session,
+    save_project_meta,
+)
 
 
 FRONTEND_DIST_DIR = Path(__file__).resolve().parents[1] / "frontend" / "dist"
@@ -40,6 +49,16 @@ app.add_middleware(
 
 if FRONTEND_DIST_DIR.exists():
     app.mount("/assets", StaticFiles(directory=FRONTEND_DIST_DIR / "assets"), name="frontend-assets")
+
+
+PROXY_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"]
+TEXT_CONTENT_TYPES = (
+    "text/",
+    "application/javascript",
+    "application/json",
+    "application/manifest+json",
+    "application/xml",
+)
 
 
 @app.middleware("http")
@@ -202,6 +221,120 @@ def get_config():
         "frontend_port": settings.frontend_port,
         "backend_port": settings.backend_port,
     }
+
+
+def _public_base_url(request: Request) -> str:
+    settings = get_settings()
+    if settings.public_base_url:
+        return settings.public_base_url.rstrip("/")
+    return str(request.base_url).rstrip("/")
+
+
+def _project_proxy_urls(request: Request, session_id: str) -> tuple[str, str]:
+    base_url = _public_base_url(request)
+    return (
+        f"{base_url}/project-preview/{session_id}",
+        f"{base_url}/project-api/{session_id}",
+    )
+
+
+def _project_target_or_404(session_id: str, field: str) -> str:
+    project = get_project_meta(session_id)
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project metadata not found")
+    target = project.get(field)
+    if not target:
+        raise HTTPException(status_code=404, detail=f"Project {field} not found")
+    return str(target).rstrip("/")
+
+
+def _join_target_url(base_url: str, path: str, query: str) -> str:
+    suffix = f"/{path}" if path else ""
+    target_url = f"{base_url}{suffix}"
+    if query:
+        target_url = f"{target_url}?{query}"
+    return target_url
+
+
+def _should_rewrite_content(content_type: str) -> bool:
+    normalized = content_type.split(";", 1)[0].strip().lower()
+    return any(normalized.startswith(prefix) for prefix in TEXT_CONTENT_TYPES)
+
+
+def _rewrite_proxy_text(content: str, preview_proxy_url: str, backend_proxy_url: str, target_base_url: str) -> str:
+    rewrites = [
+        (f"{target_base_url}/api", f"{backend_proxy_url}/api"),
+        (target_base_url, backend_proxy_url),
+        ('"/static/', f'"{preview_proxy_url}/static/'),
+        ("'/static/", f"'{preview_proxy_url}/static/"),
+        ('"/assets/', f'"{preview_proxy_url}/assets/'),
+        ("'/assets/", f"'{preview_proxy_url}/assets/"),
+        ('href="/', f'href="{preview_proxy_url}/'),
+        ("href='/", f"href='{preview_proxy_url}/"),
+        ('src="/', f'src="{preview_proxy_url}/'),
+        ("src='/", f"src='{preview_proxy_url}/"),
+        ("url(/", f"url({preview_proxy_url}/"),
+        ('"/api/', f'"{backend_proxy_url}/api/'),
+        ("'/api/", f"'{backend_proxy_url}/api/"),
+        ("`/api/", f"`{backend_proxy_url}/api/"),
+    ]
+    rewritten = content
+    for source, target in rewrites:
+        rewritten = rewritten.replace(source, target)
+    return rewritten
+
+
+async def _proxy_request(
+    request: Request,
+    target_base_url: str,
+    session_id: str,
+    path: str,
+    rewrite_content: bool = False,
+) -> Response:
+    preview_proxy_url, backend_proxy_url = _project_proxy_urls(request, session_id)
+    target_url = _join_target_url(target_base_url, path, request.url.query)
+    request_headers = {
+        key: value
+        for key, value in request.headers.items()
+        if key.lower() not in {"host", "content-length", "connection"}
+    }
+    body = await request.body()
+
+    async with httpx.AsyncClient(follow_redirects=True, timeout=30.0) as client:
+        upstream = await client.request(
+            request.method,
+            target_url,
+            content=body if body else None,
+            headers=request_headers,
+        )
+
+    response_headers = {
+        key: value
+        for key, value in upstream.headers.items()
+        if key.lower() not in {"content-length", "transfer-encoding", "connection", "content-encoding"}
+    }
+    content = upstream.content
+    content_type = upstream.headers.get("content-type", "")
+    if rewrite_content and _should_rewrite_content(content_type):
+        text = upstream.text
+        text = _rewrite_proxy_text(text, preview_proxy_url, backend_proxy_url, target_base_url)
+        content = text.encode(upstream.encoding or "utf-8")
+
+    return Response(content=content, status_code=upstream.status_code, headers=response_headers)
+
+
+@app.api_route("/project-preview/{session_id}", methods=PROXY_METHODS, include_in_schema=False)
+@app.api_route("/project-preview/{session_id}/{path:path}", methods=PROXY_METHODS, include_in_schema=False)
+async def proxy_project_preview(session_id: str, request: Request, path: str = ""):
+    target_base_url = _project_target_or_404(session_id, "preview_url")
+    return await _proxy_request(request, target_base_url, session_id, path, rewrite_content=True)
+
+
+@app.api_route("/project-api/{session_id}", methods=PROXY_METHODS, include_in_schema=False)
+@app.api_route("/project-api/{session_id}/{path:path}", methods=PROXY_METHODS, include_in_schema=False)
+async def proxy_project_api(session_id: str, request: Request, path: str = ""):
+    target_base_url = _project_target_or_404(session_id, "backend_url")
+    return await _proxy_request(request, target_base_url, session_id, path, rewrite_content=False)
 
 
 @app.get("/{full_path:path}", include_in_schema=False)

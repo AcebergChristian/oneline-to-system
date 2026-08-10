@@ -1,5 +1,6 @@
 import React from 'react'
 import { ExternalLink, FolderTree, MonitorSmartphone, Play } from 'lucide-react'
+import { getProjectBackendUrl, getProjectPreviewUrl } from '../lib/projectUrls'
 
 function buildFailureDetail(project) {
   const stderr = project?.stderr || ''
@@ -121,11 +122,12 @@ export function PreviewPanel({
 }) {
   const project = projects.find((item) => item.session_id === session?.id)
   const runtimeStatus = project?.runtime_status || 'idle'
-  const previewUrl = project?.preview_url || session?.preview_url
+  const previewUrl = getProjectPreviewUrl(project, session)
+  const backendUrl = getProjectBackendUrl(project, session)
   const hasFailedStart = Boolean(
     showFailureAnalysis && project?.started_at && runtimeStatus === 'failed' && (project?.stdout || project?.stderr),
   )
-  const failureDetail = hasFailedStart ? buildFailureDetail(project) : null
+  const failureDetail = hasFailedStart ? buildFailureDetail({ ...project, preview_url: previewUrl, backend_url: backendUrl }) : null
 
   return (
     <section className="flex h-auto flex-col border-t border-white/10 bg-black/20 lg:h-full lg:border-l lg:border-t-0">
@@ -175,7 +177,7 @@ export function PreviewPanel({
             <div>会话：{session?.title || '-'}</div>
             <div>目录：{project?.path || `project/${session?.project_slug || ''}`}</div>
             <div>前端预览：{previewUrl || '未启动'}</div>
-            <div>后端接口：{project?.backend_url || '未识别'}</div>
+            <div>后端接口：{backendUrl || '未识别'}</div>
             <div>运行状态：{runtimeStatus}</div>
             <div>本地记录：`backend/data/sessions/*.json` 与 `backend/data/logs/*.jsonl`</div>
           </div>

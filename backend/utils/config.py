@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     backend_host: str = "0.0.0.0"
     backend_port: int = 8000
     frontend_port: int = 5173
+    public_base_url: str = ""
 
     model_config = SettingsConfigDict(
         env_file=str(ROOT_DIR / ".env"),
