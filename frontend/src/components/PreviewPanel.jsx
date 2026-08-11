@@ -261,7 +261,7 @@ export function PreviewPanel({
             <div className="mt-4 space-y-3 rounded-2xl border border-white/10 bg-black/20 p-3">
               <div className="text-xs uppercase tracking-[0.2em] text-fog/70">Deployment URLs</div>
               <div className="text-xs text-fog/70">
-                外部模式下，点击上面的按钮会优先让主控自动创建 `{project_slug}-frontend` 和 `{project_slug}-api` 两个 Render service。
+                外部模式下，点击上面的按钮会优先让主控自动创建 `projectN-frontend` 和 `projectN-api` 两个 Render service。
               </div>
               <div className="text-xs text-fog/70">
                 如果这些 project 是 AI 在运行时新写出来的，主控还需要先把 `project/${session?.project_slug || 'projectN'}` 推到 Git 分支，Render 才能拉到源码。下面输入框是手动覆盖入口。
