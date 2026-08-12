@@ -16,6 +16,7 @@ import { PreviewPanel } from './components/PreviewPanel'
 import { Sidebar } from './components/Sidebar'
 import { TaskPanel } from './components/TaskPanel'
 import { api, openSessionStream } from './lib/api'
+import { getProjectPreviewUrl } from './lib/projectUrls'
 
 const ROUTES = {
   landing: '/',
@@ -588,8 +589,9 @@ export default function App() {
       await refreshSessions(activeSessionId)
       pushMessage(`项目启动请求已发送，状态：${result.runtime_status || 'unknown'}。`)
       setShowFailureAnalysis(result.runtime_status === 'failed')
-      if (result.preview_url) {
-        window.open(result.preview_url, '_blank', 'noopener,noreferrer')
+      const previewUrl = getProjectPreviewUrl({ ...result, session_id: activeSessionId }, activeSession)
+      if (previewUrl) {
+        window.open(previewUrl, '_blank', 'noopener,noreferrer')
       }
     } catch (error) {
       setShowFailureAnalysis(true)
