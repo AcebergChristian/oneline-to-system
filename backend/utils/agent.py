@@ -9,7 +9,7 @@ from uuid import uuid4
 
 from openai import OpenAI
 
-from .config import PROJECT_ROOT, get_settings
+from .config import PROJECT_ROOT, backend_url_for_slug, get_settings, preview_url_for_slug
 from .logger import log_session_event
 from .project_tools import run_tool_action
 from .schemas import Message, SessionDetail, StepEvent, ToolAction, ToolResult
@@ -66,19 +66,6 @@ def next_project_slug() -> str:
         index += 1
     return f"project{index}"
 
-
-def preview_url_for_slug(project_slug: str) -> str:
-    match = re.search(r"(\d+)$", project_slug)
-    index = int(match.group(1)) if match else 1
-    return f"http://localhost:{3000 + index}"
-
-
-def backend_url_for_slug(project_slug: str) -> str:
-    match = re.search(r"(\d+)$", project_slug)
-    index = int(match.group(1)) if match else 1
-    return f"http://localhost:{8000 + index}"
-
-
 def build_session(prompt: str) -> SessionDetail:
     session_id = uuid4().hex
     project_slug = next_project_slug()
@@ -92,6 +79,7 @@ def build_session(prompt: str) -> SessionDetail:
         messages=[Message(role="user", content=prompt)],
         steps=[],
         preview_url=preview_url_for_slug(project_slug),
+        backend_url=backend_url_for_slug(project_slug),
     )
     create_session(session)
     log_session_event(

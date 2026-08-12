@@ -12,7 +12,7 @@ from fastapi.staticfiles import StaticFiles
 import uvicorn
 
 from utils.agent import build_session, persist_stream, stream_agent_run
-from utils.config import ensure_data_dirs, get_settings
+from utils.config import backend_url_for_slug, ensure_data_dirs, get_settings, preview_url_for_slug
 from utils.logger import extract_session_id_from_request, log_session_event, log_system_event
 from utils.project_tools import run_tool_action
 from utils.project_runner import refresh_project_entry_runtime, start_project_for_session
@@ -94,6 +94,8 @@ def get_session(session_id: str):
     session = load_session(session_id)
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found")
+    session.preview_url = preview_url_for_slug(session.project_slug)
+    session.backend_url = backend_url_for_slug(session.project_slug)
     return session
 
 
@@ -201,6 +203,9 @@ def get_config():
         "memory_window": settings.ai_memory_window,
         "frontend_port": settings.frontend_port,
         "backend_port": settings.backend_port,
+        "public_base_url": settings.public_base_url,
+        "project_preview_url_template": settings.project_preview_url_template,
+        "project_backend_url_template": settings.project_backend_url_template,
     }
 
 

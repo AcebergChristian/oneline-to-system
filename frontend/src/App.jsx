@@ -582,6 +582,7 @@ export default function App() {
     if (!activeSessionId) return
     setStartingProject(true)
     setShowFailureAnalysis(false)
+    pushMessage('正在启动项目。首次构建镜像可能需要 1-3 分钟，请稍等。')
     try {
       const result = await api.startProject(activeSessionId)
       await refreshSessions(activeSessionId)

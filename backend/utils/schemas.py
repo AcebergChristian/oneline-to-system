@@ -32,6 +32,7 @@ class SessionDetail(SessionSummary):
     messages: list[Message] = Field(default_factory=list)
     steps: list[StepEvent] = Field(default_factory=list)
     preview_url: str | None = None
+    backend_url: str | None = None
 
 
 class ChatRequest(BaseModel):

@@ -11,7 +11,7 @@ from urllib.error import HTTPError, URLError
 from urllib.request import urlopen
 import yaml
 
-from .config import PROJECT_ROOT
+from .config import PROJECT_ROOT, backend_url_for_slug, preview_url_for_slug
 from .logger import log_session_event
 from .storage import append_project_run, load_session, upsert_project_meta
 
@@ -218,25 +218,53 @@ def _check_http_with_retry(url: str | None, attempts: int = 8, delay_seconds: fl
     return False, last_check
 
 
+def _is_local_url(url: str | None) -> bool:
+    return bool(url) and ("localhost:" in str(url) or "127.0.0.1:" in str(url))
+
+
+def _public_preview_url(project_slug: str, current_url: str | None) -> str | None:
+    if current_url and not _is_local_url(current_url):
+        return current_url
+    return preview_url_for_slug(project_slug)
+
+
+def _public_backend_url(project_slug: str, current_url: str | None) -> str | None:
+    if current_url and not _is_local_url(current_url):
+        return current_url
+    return backend_url_for_slug(project_slug)
+
+
+def _normalize_entry_urls(entry: dict) -> dict:
+    project_slug = str(entry.get("project_slug") or "")
+    if not project_slug:
+        return entry
+
+    normalized = dict(entry)
+    normalized["preview_url"] = _public_preview_url(project_slug, normalized.get("preview_url"))
+    normalized["backend_url"] = _public_backend_url(project_slug, normalized.get("backend_url"))
+    return normalized
+
+
 def refresh_project_entry_runtime(entry: dict) -> dict:
-    preview_url = entry.get("preview_url")
-    backend_url = entry.get("backend_url")
+    normalized = _normalize_entry_urls(entry)
+    preview_url = normalized.get("internal_preview_url") or normalized.get("preview_url")
+    backend_url = normalized.get("internal_backend_url") or normalized.get("backend_url")
     frontend_ok, frontend_check = _check_http(preview_url)
     backend_ok, backend_check = _check_backend_http(backend_url)
 
     if frontend_ok and backend_ok:
         return {
-            **entry,
+            **normalized,
             "runtime_status": "running",
             "failure_reason": None,
-            "service_states": entry.get("service_states", {}),
-            "service_state_error": entry.get("service_state_error", ""),
+            "service_states": normalized.get("service_states", {}),
+            "service_state_error": normalized.get("service_state_error", ""),
             "last_verified_at": datetime.utcnow().isoformat(),
             "last_frontend_check": frontend_check,
             "last_backend_check": backend_check,
         }
 
-    return entry
+    return normalized
 
 
 def start_project_for_session(session_id: str) -> dict:
@@ -321,14 +349,14 @@ def start_project_for_session(session_id: str) -> dict:
                 },
             )
 
-    preview_url, backend_url = _detect_runtime_urls(project_dir, session.preview_url)
+    internal_preview_url, internal_backend_url = _detect_runtime_urls(project_dir, session.preview_url)
     service_states: dict[str, str] = {}
     service_state_error = ""
     if result.returncode == 0:
         service_states, service_state_error = _compose_service_states(compose_command, project_dir)
         runtime_preview_url, runtime_backend_url = _urls_from_compose_runtime(compose_command, project_dir)
-        preview_url = runtime_preview_url or preview_url
-        backend_url = runtime_backend_url or backend_url
+        internal_preview_url = runtime_preview_url or internal_preview_url
+        internal_backend_url = runtime_backend_url or internal_backend_url
 
     runtime_status = "running" if result.returncode == 0 else "failed"
     failure_reason = None
@@ -345,11 +373,11 @@ def start_project_for_session(session_id: str) -> dict:
             failure_reason = "compose_start_failed"
     else:
         unhealthy_services = {name: state for name, state in service_states.items() if "running" not in state.lower()}
-        has_explicit_preview = preview_url is not None
-        frontend_ok, frontend_check = _check_http_with_retry(preview_url) if has_explicit_preview else (True, "preview_not_required")
-        backend_ok, backend_check = _check_http_with_retry(backend_url, attempts=8, delay_seconds=1.5)
+        has_explicit_preview = internal_preview_url is not None
+        frontend_ok, frontend_check = _check_http_with_retry(internal_preview_url) if has_explicit_preview else (True, "preview_not_required")
+        backend_ok, backend_check = _check_http_with_retry(internal_backend_url, attempts=8, delay_seconds=1.5)
         if not backend_ok:
-            backend_ok, backend_check = _check_backend_http(backend_url)
+            backend_ok, backend_check = _check_backend_http(internal_backend_url)
         if unhealthy_services:
             runtime_status = "failed"
             failure_reason = "services_not_running"
@@ -372,12 +400,17 @@ def start_project_for_session(session_id: str) -> dict:
                 "backend_check": backend_check,
             },
         )
+
+    public_preview_url = _public_preview_url(session.project_slug, internal_preview_url or session.preview_url)
+    public_backend_url = _public_backend_url(session.project_slug, internal_backend_url or session.backend_url)
     payload = {
         "session_id": session.id,
         "project_slug": session.project_slug,
         "path": str(project_dir.relative_to(PROJECT_ROOT.parent)),
-        "preview_url": preview_url,
-        "backend_url": backend_url,
+        "preview_url": public_preview_url,
+        "backend_url": public_backend_url,
+        "internal_preview_url": internal_preview_url,
+        "internal_backend_url": internal_backend_url,
         "runtime_status": runtime_status,
         "started_at": datetime.utcnow().isoformat(),
         "command": command_used,
@@ -396,7 +429,7 @@ def start_project_for_session(session_id: str) -> dict:
         "start_command_finished",
         {
             "runtime_status": runtime_status,
-            "preview_url": preview_url,
+            "preview_url": public_preview_url,
             "returncode": result.returncode,
             "failure_reason": failure_reason,
         },

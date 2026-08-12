@@ -1,5 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
+import re
+from urllib.parse import urlsplit
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -25,6 +27,9 @@ class Settings(BaseSettings):
     backend_host: str = "0.0.0.0"
     backend_port: int = 8000
     frontend_port: int = 5173
+    public_base_url: str = ""
+    project_preview_url_template: str = ""
+    project_backend_url_template: str = ""
 
     model_config = SettingsConfigDict(
         env_file=str(ROOT_DIR / ".env"),
@@ -47,3 +52,57 @@ def ensure_data_dirs() -> None:
         PROJECT_EVENTS_PATH.write_text("", encoding="utf-8")
     if not PROJECT_RUNS_PATH.exists():
         PROJECT_RUNS_PATH.write_text("", encoding="utf-8")
+
+
+def project_index(project_slug: str) -> int:
+    match = re.search(r"(\d+)$", project_slug)
+    return int(match.group(1)) if match else 1
+
+
+def _format_project_url(template: str, project_slug: str) -> str:
+    index = project_index(project_slug)
+    return template.format(
+        project_slug=project_slug,
+        project_index=index,
+        port_preview=3000 + index,
+        port_backend=8000 + index,
+    )
+
+
+def _public_origin_without_port() -> str | None:
+    settings = get_settings()
+    if not settings.public_base_url:
+        return None
+
+    parsed = urlsplit(settings.public_base_url.strip())
+    if not parsed.scheme or not parsed.hostname:
+        return None
+
+    hostname = parsed.hostname
+    if ":" in hostname and not hostname.startswith("["):
+        hostname = f"[{hostname}]"
+    return f"{parsed.scheme}://{hostname}"
+
+
+def preview_url_for_slug(project_slug: str) -> str:
+    settings = get_settings()
+    if settings.project_preview_url_template:
+        return _format_project_url(settings.project_preview_url_template, project_slug)
+
+    origin = _public_origin_without_port()
+    index = project_index(project_slug)
+    if origin:
+        return f"{origin}:{3000 + index}"
+    return f"http://localhost:{3000 + index}"
+
+
+def backend_url_for_slug(project_slug: str) -> str:
+    settings = get_settings()
+    if settings.project_backend_url_template:
+        return _format_project_url(settings.project_backend_url_template, project_slug)
+
+    origin = _public_origin_without_port()
+    index = project_index(project_slug)
+    if origin:
+        return f"{origin}:{8000 + index}"
+    return f"http://localhost:{8000 + index}"
