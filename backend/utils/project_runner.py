@@ -196,7 +196,8 @@ def _check_backend_http(url: str | None) -> tuple[bool, str]:
     if not url:
         return False, "missing_url"
 
-    candidate_urls = [f"{url}/api/health", url, f"{url}/docs", f"{url}/openapi.json"]
+    normalized = str(url).rstrip("/")
+    candidate_urls = [f"{normalized}/api/health", normalized, f"{normalized}/docs", f"{normalized}/openapi.json"]
     last_check = "missing_url"
     for candidate in candidate_urls:
         ok, check = _check_http(candidate)
@@ -222,6 +223,18 @@ def _is_local_url(url: str | None) -> bool:
     return bool(url) and ("localhost:" in str(url) or "127.0.0.1:" in str(url))
 
 
+def _internal_preview_url_for_slug(project_slug: str) -> str:
+    match = re.search(r"(\d+)$", project_slug)
+    index = int(match.group(1)) if match else 1
+    return f"http://localhost:{3000 + index}"
+
+
+def _internal_backend_url_for_slug(project_slug: str) -> str:
+    match = re.search(r"(\d+)$", project_slug)
+    index = int(match.group(1)) if match else 1
+    return f"http://localhost:{8000 + index}"
+
+
 def _public_preview_url(project_slug: str, current_url: str | None) -> str | None:
     if current_url and not _is_local_url(current_url):
         return current_url
@@ -242,6 +255,8 @@ def _normalize_entry_urls(entry: dict) -> dict:
     normalized = dict(entry)
     normalized["preview_url"] = _public_preview_url(project_slug, normalized.get("preview_url"))
     normalized["backend_url"] = _public_backend_url(project_slug, normalized.get("backend_url"))
+    normalized["internal_preview_url"] = normalized.get("internal_preview_url") or _internal_preview_url_for_slug(project_slug)
+    normalized["internal_backend_url"] = normalized.get("internal_backend_url") or _internal_backend_url_for_slug(project_slug)
     return normalized
 
 
@@ -349,7 +364,11 @@ def start_project_for_session(session_id: str) -> dict:
                 },
             )
 
-    internal_preview_url, internal_backend_url = _detect_runtime_urls(project_dir, session.preview_url)
+    internal_preview_url, internal_backend_url = _detect_runtime_urls(
+        project_dir,
+        _internal_preview_url_for_slug(session.project_slug),
+    )
+    internal_backend_url = internal_backend_url or _internal_backend_url_for_slug(session.project_slug)
     service_states: dict[str, str] = {}
     service_state_error = ""
     if result.returncode == 0:
