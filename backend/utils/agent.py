@@ -36,6 +36,7 @@ Rules:
 - If you need to inspect existing generated files, use tools first.
 - Every generated project must use its own backend port and must not reuse the main controller backend port.
 - For projectN, use frontend preview port 300N and backend API port 800N unless the existing project files already define a different project-specific port plan that still avoids 8000.
+- Frontend code must not assume the browser can access `localhost` on deployed servers. If an API base URL is configurable, use the configured value when valid, otherwise derive the host from `window.location.hostname` and only keep the project-specific backend port.
 
 Execution contract:
 - First produce a concise execution plan.
@@ -176,7 +177,8 @@ def _tool_specs(project_slug: str, preview_url: str) -> list[dict[str, Any]]:
                     f"Write a UTF-8 text file inside project/{project_slug}. "
                     f"Use this to create frontend, backend, Dockerfile and docker-compose.yml. "
                     f"Generated app should be previewable at {preview_url} when the frontend is started. "
-                    f"The generated backend API must use the project-specific port {backend_url}, not the controller backend port 8000."
+                    f"The generated backend API must use the project-specific port {backend_url}, not the controller backend port 8000. "
+                    "Do not hardcode browser requests to localhost for deployed environments."
                 ),
                 "parameters": {
                     "type": "object",

@@ -4,7 +4,25 @@ import BuildingInterior from './BuildingInterior';
 import SensorDetail from './SensorDetail';
 import './App.css';
 
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:8005';
+function resolveApiBase() {
+  const configured = process.env.REACT_APP_API_URL || '';
+  if (configured) {
+    try {
+      const parsed = new URL(configured);
+      if ((parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        parsed.protocol = window.location.protocol;
+        parsed.hostname = window.location.hostname;
+        return parsed.toString().replace(/\/$/, '');
+      }
+      return configured.replace(/\/$/, '');
+    } catch {
+      return configured.replace(/\/$/, '');
+    }
+  }
+  return `${window.location.protocol}//${window.location.hostname}:8005`;
+}
+
+const API_BASE = resolveApiBase();
 
 export default function App() {
   const [parkData, setParkData] = useState(null);
