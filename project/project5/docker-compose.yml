@@ -12,9 +12,7 @@ services:
     ports:
       - "3005:3005"
     environment:
-      - PORT=3005
       - REACT_APP_API_URL=http://localhost:8005
-      - WATCHPACK_POLLING=true
     depends_on:
       - backend
     restart: unless-stopped

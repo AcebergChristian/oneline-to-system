@@ -103,9 +103,9 @@ def _detect_runtime_urls(project_dir: Path, fallback_preview_url: str | None) ->
             continue
         host_port = int(match.group(1))
         container_port = int(match.group(2))
-        if host_port >= 1024 and container_port in {80, 3000, 4173, 5173}:
+        if host_port >= 1024 and (container_port in {80, 3000, 4173, 5173} or 3001 <= container_port <= 3999):
             preview_url = f"http://localhost:{host_port}"
-        if host_port >= 1024 and container_port in {8000, 8005, 8080}:
+        if host_port >= 1024 and (container_port in {8000, 8005, 8080} or 8001 <= container_port <= 8999):
             api_url = f"http://localhost:{host_port}"
     return preview_url, api_url
 
@@ -156,6 +156,30 @@ def _compose_services(compose_command: list[str], project_dir: Path) -> tuple[li
     return services, ""
 
 
+def _compose_ps_text(compose_command: list[str], project_dir: Path) -> str:
+    result = subprocess.run(
+        [*compose_command, "ps", "-a"],
+        cwd=project_dir,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    output = (result.stdout or "") + ("\n" + result.stderr if result.stderr else "")
+    return output[-6000:].strip()
+
+
+def _compose_logs_tail(compose_command: list[str], project_dir: Path, tail: int = 160) -> str:
+    result = subprocess.run(
+        [*compose_command, "logs", "--tail", str(tail)],
+        cwd=project_dir,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    output = (result.stdout or "") + ("\n" + result.stderr if result.stderr else "")
+    return output[-12000:].strip()
+
+
 def _urls_from_compose_runtime(compose_command: list[str], project_dir: Path) -> tuple[str | None, str | None]:
     services, _ = _compose_services(compose_command, project_dir)
     preview_url = None
@@ -170,9 +194,9 @@ def _urls_from_compose_runtime(compose_command: list[str], project_dir: Path) ->
                 continue
             host_port = int(published_port)
             container_port = int(target_port)
-            if host_port >= 1024 and container_port in {80, 3000, 4173, 5173} and preview_url is None:
+            if host_port >= 1024 and (container_port in {80, 3000, 4173, 5173} or 3001 <= container_port <= 3999) and preview_url is None:
                 preview_url = f"http://localhost:{host_port}"
-            if host_port >= 1024 and container_port in {8000, 8005, 8080} and backend_url is None:
+            if host_port >= 1024 and (container_port in {8000, 8005, 8080} or 8001 <= container_port <= 8999) and backend_url is None:
                 backend_url = f"http://localhost:{host_port}"
 
     return preview_url, backend_url
@@ -207,7 +231,7 @@ def _check_backend_http(url: str | None) -> tuple[bool, str]:
     return False, last_check
 
 
-def _check_http_with_retry(url: str | None, attempts: int = 8, delay_seconds: float = 1.5) -> tuple[bool, str]:
+def _check_http_with_retry(url: str | None, attempts: int = 15, delay_seconds: float = 2.0) -> tuple[bool, str]:
     last_check = "missing_url"
     for attempt in range(attempts):
         ok, check = _check_http(url)
@@ -371,6 +395,8 @@ def start_project_for_session(session_id: str) -> dict:
     internal_backend_url = internal_backend_url or _internal_backend_url_for_slug(session.project_slug)
     service_states: dict[str, str] = {}
     service_state_error = ""
+    compose_ps = ""
+    compose_logs = ""
     if result.returncode == 0:
         service_states, service_state_error = _compose_service_states(compose_command, project_dir)
         runtime_preview_url, runtime_backend_url = _urls_from_compose_runtime(compose_command, project_dir)
@@ -390,6 +416,8 @@ def start_project_for_session(session_id: str) -> dict:
             failure_reason = "port_conflict"
         else:
             failure_reason = "compose_start_failed"
+        compose_ps = _compose_ps_text(compose_command, project_dir)
+        compose_logs = _compose_logs_tail(compose_command, project_dir)
     else:
         unhealthy_services = {name: state for name, state in service_states.items() if "running" not in state.lower()}
         has_explicit_preview = internal_preview_url is not None
@@ -406,6 +434,9 @@ def start_project_for_session(session_id: str) -> dict:
         elif not frontend_ok:
             runtime_status = "failed"
             failure_reason = "frontend_unreachable"
+        if runtime_status == "failed":
+            compose_ps = _compose_ps_text(compose_command, project_dir)
+            compose_logs = _compose_logs_tail(compose_command, project_dir)
         log_session_event(
             session_id,
             "project",
@@ -417,6 +448,8 @@ def start_project_for_session(session_id: str) -> dict:
                 "frontend_check": frontend_check,
                 "backend_ok": backend_ok,
                 "backend_check": backend_check,
+                "compose_ps": compose_ps[-2000:],
+                "compose_logs": compose_logs[-4000:],
             },
         )
 
@@ -439,6 +472,8 @@ def start_project_for_session(session_id: str) -> dict:
         "failure_reason": failure_reason,
         "service_states": service_states,
         "service_state_error": service_state_error,
+        "compose_ps": compose_ps,
+        "compose_logs": compose_logs,
     }
     upsert_project_meta(payload)
     append_project_run(payload)

@@ -5,8 +5,10 @@ import { getProjectBackendUrl, getProjectPreviewUrl } from '../lib/projectUrls'
 function buildFailureDetail(project) {
   const stderr = project?.stderr || ''
   const stdout = project?.stdout || ''
+  const composePs = project?.compose_ps || ''
+  const composeLogs = project?.compose_logs || ''
   const failureReason = project?.failure_reason || ''
-  const combined = `${stderr}\n${stdout}`
+  const combined = `${stderr}\n${stdout}\n${composePs}\n${composeLogs}`
   const previewUrl = project?.preview_url || '当前前端地址'
   const backendUrl = project?.backend_url || '当前后端地址'
   const serviceStates = project?.service_states || {}
@@ -125,7 +127,10 @@ export function PreviewPanel({
   const previewUrl = getProjectPreviewUrl(project, session)
   const backendUrl = getProjectBackendUrl(project, session)
   const hasFailedStart = Boolean(
-    showFailureAnalysis && project?.started_at && runtimeStatus === 'failed' && (project?.stdout || project?.stderr),
+    showFailureAnalysis &&
+      project?.started_at &&
+      runtimeStatus === 'failed' &&
+      (project?.stdout || project?.stderr || project?.compose_ps || project?.compose_logs),
   )
   const failureDetail = hasFailedStart ? buildFailureDetail({ ...project, preview_url: previewUrl, backend_url: backendUrl }) : null
 
@@ -164,7 +169,7 @@ export function PreviewPanel({
               点击上面的按钮，会把建议修复指令直接填到当前会话输入框里，你再发送即可。
             </div>
             <pre className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap text-xs text-fog">
-              {project?.stderr || project?.stdout}
+              {[project?.compose_ps, project?.compose_logs, project?.stderr, project?.stdout].filter(Boolean).join('\n\n')}
             </pre>
           </div>
         ) : null}

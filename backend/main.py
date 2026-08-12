@@ -174,6 +174,8 @@ def start_project(session_id: str):
             f"项目启动结果: {result.get('runtime_status')}.\n"
             f"预览地址: {result.get('preview_url') or '无'}\n"
             f"失败原因: {result.get('failure_reason') or '无'}\n"
+            f"compose ps: {(result.get('compose_ps') or '')[-1000:]}\n"
+            f"compose logs: {(result.get('compose_logs') or '')[-1500:]}\n"
             f"stderr: {(result.get('stderr') or '')[-800:]}\n"
             f"stdout: {(result.get('stdout') or '')[-800:]}\n"
             "如果需要修复，请继续在当前会话直接描述要补什么，Agent 会基于现有 project 和失败日志继续修改。"
