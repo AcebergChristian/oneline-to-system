@@ -1,7 +1,12 @@
 services:
-  project2:
-    build:
-      context: .
-      dockerfile: Dockerfile
+  backend:
+    build: ./backend
     ports:
-      - "3002:8000"
+      - "8002:8002"
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3002:3002"
+    depends_on:
+      - backend

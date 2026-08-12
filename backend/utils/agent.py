@@ -35,7 +35,17 @@ Rules:
 - Keep files practical and runnable. Prefer a small but real implementation over placeholders.
 - If you need to inspect existing generated files, use tools first.
 - Every generated project must use its own backend port and must not reuse the main controller backend port.
-- For projectN, use frontend preview port 300N and backend API port 800N unless the existing project files already define a different project-specific port plan that still avoids 8000.
+- Port assignment is mandatory:
+  - project1 => frontend 3001, backend 8001
+  - project2 => frontend 3002, backend 8002
+  - projectN => frontend 300N, backend 800N
+- Generated project files must consistently use those exact ports in:
+  - backend app startup command
+  - backend Dockerfile EXPOSE/CMD
+  - frontend dev/build config if a port is required
+  - docker-compose.yml port mappings
+  - frontend API base URL fallback logic
+- Never leave a generated subproject backend on 8000 unless it is only an internal container port and the published host port still follows 800N.
 - Frontend code must not assume the browser can access `localhost` on deployed servers. If an API base URL is configurable, use the configured value when valid, otherwise derive the host from `window.location.hostname` and only keep the project-specific backend port.
 
 Execution contract:
@@ -66,6 +76,12 @@ def next_project_slug() -> str:
     while f"project{index}" in existing:
         index += 1
     return f"project{index}"
+
+
+def project_ports(project_slug: str) -> tuple[int, int]:
+    match = re.search(r"(\d+)$", project_slug)
+    index = int(match.group(1)) if match else 1
+    return 3000 + index, 8000 + index
 
 def build_session(prompt: str) -> SessionDetail:
     session_id = uuid4().hex
@@ -119,6 +135,7 @@ def _project_metadata(session: SessionDetail) -> dict[str, Any]:
 
 def _tool_specs(project_slug: str, preview_url: str) -> list[dict[str, Any]]:
     backend_url = backend_url_for_slug(project_slug)
+    frontend_port, backend_port = project_ports(project_slug)
     path_description = (
         f"Relative path inside project/{project_slug}. "
         "Do not use absolute paths. Do not target .env files."
@@ -177,8 +194,10 @@ def _tool_specs(project_slug: str, preview_url: str) -> list[dict[str, Any]]:
                     f"Write a UTF-8 text file inside project/{project_slug}. "
                     f"Use this to create frontend, backend, Dockerfile and docker-compose.yml. "
                     f"Generated app should be previewable at {preview_url} when the frontend is started. "
+                    f"This project must use frontend port {frontend_port} and backend port {backend_port}. "
                     f"The generated backend API must use the project-specific port {backend_url}, not the controller backend port 8000. "
-                    "Do not hardcode browser requests to localhost for deployed environments."
+                    "Do not hardcode browser requests to localhost for deployed environments. "
+                    "Keep the port plan consistent across source code, Dockerfiles, and docker-compose."
                 ),
                 "parameters": {
                     "type": "object",
@@ -199,7 +218,7 @@ def _runtime_context(session: SessionDetail) -> str:
     if not project:
         return "No runtime information recorded yet."
 
-        return (
+    return (
         "Latest project runtime context:\n"
         f"- runtime_status: {project.get('runtime_status', 'unknown')}\n"
         f"- preview_url: {project.get('preview_url', session.preview_url or '')}\n"
