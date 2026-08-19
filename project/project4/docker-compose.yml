@@ -1,19 +1,13 @@
+# 由 DeepWisdom 平台自动生成,请勿手动修改。
 services:
-  backend:
-    build: ./backend
-    ports:
-      - "8004:8004"
-    volumes:
-      - ./backend:/app
-    environment:
-      - PYTHONUNBUFFERED=1
-
-  frontend:
+  app:
     build:
-      context: ./frontend
+      context: .
+      dockerfile: Dockerfile
       args:
-        REACT_APP_API_URL: http://localhost:8004
+        NPM_CONFIG_REGISTRY: https://registry.npmmirror.com
+        PIP_INDEX_URL: https://mirrors.aliyun.com/pypi/simple/
+        PIP_TRUSTED_HOST: mirrors.aliyun.com
     ports:
-      - "3004:3004"
-    depends_on:
-      - backend
+      - "8004:8000"
+    restart: unless-stopped

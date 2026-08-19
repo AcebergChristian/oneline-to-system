@@ -1,0 +1,7 @@
+**/node_modules
+**/__pycache__
+**/.git
+**/.venv
+**/*.pyc
+**/.DS_Store
+.codex-runtime.compose.yml
