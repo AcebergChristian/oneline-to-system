@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react'
-import { ExternalLink, FolderTree, MonitorSmartphone, Play } from 'lucide-react'
+import { ExternalLink, FolderTree, MonitorSmartphone, Play, Square } from 'lucide-react'
 import { getProjectBackendUrl, getProjectPreviewUrl } from '../lib/projectUrls'
 
 function buildFailureDetail(project) {
@@ -119,7 +119,9 @@ export function PreviewPanel({
   session,
   projects,
   onStartProject,
+  onStopProject,
   startingProject,
+  stoppingProject,
   message,
   onUseRepairPrompt,
   showFailureAnalysis,
@@ -204,15 +206,27 @@ export function PreviewPanel({
             <div>本地记录：`backend/data/sessions/*.json` 与 `backend/data/logs/*.jsonl`</div>
           </div>
           <div className="mt-4 flex gap-3">
-            <button
-              type="button"
-              onClick={onStartProject}
-              disabled={!session || startingProject}
-              className="flex items-center gap-2 rounded-2xl bg-ember px-4 py-3 text-sm font-medium text-white disabled:opacity-60"
-            >
-              <Play size={16} />
-              {startingProject ? '启动中...' : '启动项目'}
-            </button>
+            {isLive && !startingProject ? (
+              <button
+                type="button"
+                onClick={onStopProject}
+                disabled={!session || stoppingProject}
+                className="flex items-center gap-2 rounded-2xl bg-rose-500/80 px-4 py-3 text-sm font-medium text-white transition hover:bg-rose-500 disabled:opacity-60"
+              >
+                <Square size={16} />
+                {stoppingProject ? '停止中...' : '停止项目'}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={onStartProject}
+                disabled={!session || startingProject}
+                className="flex items-center gap-2 rounded-2xl bg-ember px-4 py-3 text-sm font-medium text-white disabled:opacity-60"
+              >
+                <Play size={16} />
+                {startingProject ? '启动中...' : '启动项目'}
+              </button>
+            )}
             {livePreviewUrl ? (
               <a
                 href={livePreviewUrl}

@@ -31,6 +31,10 @@ export const api = {
     request(`/sessions/${sessionId}/start`, {
       method: 'POST',
     }),
+  stopProject: (sessionId) =>
+    request(`/sessions/${sessionId}/stop`, {
+      method: 'POST',
+    }),
   runTool: (sessionId, payload) =>
     request(`/sessions/${sessionId}/tools`, {
       method: 'POST',

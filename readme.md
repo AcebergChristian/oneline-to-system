@@ -175,6 +175,7 @@ http://localhost:8000
 | POST | `/api/sessions/{id}/messages` | 向会话发送消息 |
 | GET | `/api/sessions/{id}/stream` | SSE 流式获取 Agent 执行过程 |
 | POST | `/api/sessions/{id}/start` | 启动会话对应的生成项目 |
+| POST | `/api/sessions/{id}/stop` | 停止会话对应的生成项目 |
 | POST | `/api/sessions/{id}/tools` | 手动执行工具操作 |
 | GET | `/api/projects` | 获取所有项目元信息 |
 | GET | `/api/config` | 获取当前配置 |

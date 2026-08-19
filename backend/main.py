@@ -15,7 +15,7 @@ from utils.agent import build_session, persist_stream, stream_agent_run
 from utils.config import backend_url_for_slug, ensure_data_dirs, get_settings
 from utils.logger import extract_session_id_from_request, log_session_event, log_system_event
 from utils.project_tools import run_tool_action
-from utils.project_runner import refresh_project_entry_runtime, start_project_for_session
+from utils.project_runner import refresh_project_entry_runtime, start_project_for_session, stop_project_for_session
 from utils.schemas import ChatRequest, Message, SessionCreateRequest, StepEvent, ToolAction
 from utils.storage import append_message, append_step, list_sessions, load_project_meta, load_session, save_project_meta
 
@@ -200,6 +200,25 @@ def start_project(session_id: str):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:  # noqa: BLE001
         log_session_event(session_id, "api", "project_start_error", {"detail": str(exc)})
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.post("/api/sessions/{session_id}/stop")
+def stop_project(session_id: str):
+    session = load_session(session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+    try:
+        log_session_event(session_id, "api", "project_stop_requested", {})
+        return stop_project_for_session(session_id)
+    except FileNotFoundError as exc:
+        log_session_event(session_id, "api", "project_stop_not_found", {"detail": str(exc)})
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        log_session_event(session_id, "api", "project_stop_runtime_error", {"detail": str(exc)})
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:  # noqa: BLE001
+        log_session_event(session_id, "api", "project_stop_error", {"detail": str(exc)})
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 

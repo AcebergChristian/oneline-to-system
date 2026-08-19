@@ -554,8 +554,67 @@ def start_project_for_session(session_id: str) -> dict:
     return payload
 
 
+# ---------------------------------------------------------------------------
+# 停止项目
+# ---------------------------------------------------------------------------
+
+def stop_project_for_session(session_id: str) -> dict:
+    """停止会话对应项目的容器(docker compose stop,保留容器便于快速再启动)。"""
+    session = load_session(session_id)
+    if session is None:
+        raise FileNotFoundError(session_id)
+
+    project_dir = PROJECT_ROOT / session.project_slug
+    compose_path = project_dir / "docker-compose.yml"
+    if not compose_path.exists():
+        raise RuntimeError("该项目还没有启动过,没有可停止的容器。")
+
+    compose_base = _resolve_compose_command()
+    if compose_base is None:
+        raise RuntimeError("docker 或 docker-compose 不可用,无法停止项目。")
+    compose_command = [*compose_base, "-p", session.project_slug, "-f", str(compose_path)]
+
+    result = subprocess.run(
+        [*compose_command, "stop"],
+        cwd=project_dir,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=120,
+    )
+    log_session_event(
+        session_id,
+        "project",
+        "stop_command_finished",
+        {
+            "returncode": result.returncode,
+            "stdout": result.stdout[-2000:],
+            "stderr": result.stderr[-2000:],
+        },
+    )
+
+    stopped_ok = result.returncode == 0
+    upsert_project_meta(
+        {
+            "session_id": session.id,
+            "project_slug": session.project_slug,
+            "runtime_status": "stopped" if stopped_ok else "failed",
+            "failure_reason": None if stopped_ok else "compose_stop_failed",
+        }
+    )
+    return {
+        "session_id": session.id,
+        "project_slug": session.project_slug,
+        "runtime_status": "stopped" if stopped_ok else "failed",
+        "returncode": result.returncode,
+        "stdout": result.stdout[-2000:],
+        "stderr": result.stderr[-2000:],
+    }
+
+
 __all__ = [
     "refresh_project_entry_runtime",
     "start_project_for_session",
+    "stop_project_for_session",
     "write_deploy_files",
 ]

@@ -370,6 +370,8 @@ function Workspace({
   isStreaming,
   startingProject,
   startingProjectIds,
+  stoppingProject,
+  stoppingProjectIds,
   showCreateModal,
   newSessionPrompt,
   uiMessage,
@@ -379,6 +381,7 @@ function Workspace({
   onBackToLanding,
   onSubmit,
   onStartProject,
+  onStopProject,
   onUseRepairPrompt,
   onCloseCreateModal,
   onNewSessionPromptChange,
@@ -391,6 +394,7 @@ function Workspace({
           sessions={sessions}
           projects={projects}
           startingProjectIds={startingProjectIds}
+          stoppingProjectIds={stoppingProjectIds}
           activeId={activeSessionId}
           onSelect={onSelect}
           onCreateSession={onOpenCreateModal}
@@ -407,7 +411,9 @@ function Workspace({
           session={activeSession}
           projects={projects}
           onStartProject={onStartProject}
+          onStopProject={onStopProject}
           startingProject={startingProject}
+          stoppingProject={stoppingProject}
           message={uiMessage}
           onUseRepairPrompt={onUseRepairPrompt}
           showFailureAnalysis={showFailureAnalysis}
@@ -460,6 +466,7 @@ export default function App() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   // 启动中 / 失败分析 / 提示消息都按会话记录,切换会话时各自独立
   const [startingProjectIds, setStartingProjectIds] = useState({})
+  const [stoppingProjectIds, setStoppingProjectIds] = useState({})
   const [failureSessionIds, setFailureSessionIds] = useState({})
   const [uiMessages, setUiMessages] = useState({})
   const [isStreaming, setIsStreaming] = useState(false)
@@ -599,7 +606,7 @@ export default function App() {
 
   async function handleStartProject() {
     const sessionId = activeSessionId
-    if (!sessionId || startingProjectIds[sessionId]) return
+    if (!sessionId || startingProjectIds[sessionId] || stoppingProjectIds[sessionId]) return
     setStartingProjectIds((current) => ({ ...current, [sessionId]: true }))
     setFailureSessionIds((current) => ({ ...current, [sessionId]: false }))
     pushMessage(sessionId, '正在启动项目。首次构建镜像可能需要 1-3 分钟，请稍等。')
@@ -621,6 +628,26 @@ export default function App() {
       }
     } finally {
       setStartingProjectIds((current) => {
+        const next = { ...current }
+        delete next[sessionId]
+        return next
+      })
+    }
+  }
+
+  async function handleStopProject() {
+    const sessionId = activeSessionId
+    if (!sessionId || startingProjectIds[sessionId] || stoppingProjectIds[sessionId]) return
+    setStoppingProjectIds((current) => ({ ...current, [sessionId]: true }))
+    pushMessage(sessionId, '正在停止项目...')
+    try {
+      await api.stopProject(sessionId)
+      await refreshData()
+      pushMessage(sessionId, '项目已停止。')
+    } catch (error) {
+      pushMessage(sessionId, error.message || '停止项目失败')
+    } finally {
+      setStoppingProjectIds((current) => {
         const next = { ...current }
         delete next[sessionId]
         return next
@@ -653,6 +680,8 @@ export default function App() {
         isStreaming={isStreaming}
         startingProject={Boolean(startingProjectIds[activeSessionId])}
         startingProjectIds={startingProjectIds}
+        stoppingProject={Boolean(stoppingProjectIds[activeSessionId])}
+        stoppingProjectIds={stoppingProjectIds}
         showCreateModal={showCreateModal}
         newSessionPrompt={newSessionPrompt}
         uiMessage={uiMessages[activeSessionId] || ''}
@@ -662,6 +691,7 @@ export default function App() {
         onBackToLanding={handleBackToLanding}
         onSubmit={handleWorkspaceSubmit}
         onStartProject={handleStartProject}
+        onStopProject={handleStopProject}
         onUseRepairPrompt={handleUseRepairPrompt}
         onCloseCreateModal={() => {
           setShowCreateModal(false)

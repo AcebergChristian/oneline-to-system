@@ -3,13 +3,14 @@ import { ArrowLeft, Plus } from 'lucide-react'
 
 const STATUS_META = {
   starting: { dot: 'bg-amber-400 animate-pulse', label: '启动中' },
+  stopping: { dot: 'bg-amber-400 animate-pulse', label: '停止中' },
   running: { dot: 'bg-emerald-400', label: '运行中' },
   failed: { dot: 'bg-rose-400', label: '启动失败' },
   stopped: { dot: 'bg-zinc-500', label: '已停止' },
   idle: { dot: 'bg-zinc-600', label: '未启动' },
 }
 
-export function Sidebar({ sessions, projects, startingProjectIds, activeId, onSelect, onCreateSession, onBackToLanding }) {
+export function Sidebar({ sessions, projects, startingProjectIds, stoppingProjectIds, activeId, onSelect, onCreateSession, onBackToLanding }) {
   return (
     <aside className="flex h-auto flex-col border-b border-white/10 bg-black/15 lg:h-full lg:border-b-0 lg:border-r">
       <div className="border-b border-white/10 px-4 py-4">
@@ -41,7 +42,9 @@ export function Sidebar({ sessions, projects, startingProjectIds, activeId, onSe
           const project = (projects || []).find((item) => item.session_id === session.id)
           const status = startingProjectIds?.[session.id]
             ? 'starting'
-            : project?.runtime_status || 'idle'
+            : stoppingProjectIds?.[session.id]
+              ? 'stopping'
+              : project?.runtime_status || 'idle'
           const meta = STATUS_META[status] || STATUS_META.idle
           return (
             <button
