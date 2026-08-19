@@ -1,18 +1,13 @@
+# 由 DeepWisdom 平台自动生成,请勿手动修改。
 services:
-  backend:
-    build: ./backend
-    container_name: game1024-backend
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NPM_CONFIG_REGISTRY: https://registry.npmmirror.com
+        PIP_INDEX_URL: https://mirrors.aliyun.com/pypi/simple/
+        PIP_TRUSTED_HOST: mirrors.aliyun.com
     ports:
-      - "8006:8006"
-    volumes:
-      - ./backend/data:/app/data
-
-  frontend:
-    build: ./frontend
-    container_name: game1024-frontend
-    ports:
-      - "3006:3006"
-    depends_on:
-      - backend
-    environment:
-      - REACT_APP_API_URL=http://localhost:8006
+      - "8007:8000"
+    restart: unless-stopped

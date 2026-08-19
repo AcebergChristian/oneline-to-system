@@ -9,5 +9,5 @@ services:
         PIP_INDEX_URL: https://mirrors.aliyun.com/pypi/simple/
         PIP_TRUSTED_HOST: mirrors.aliyun.com
     ports:
-      - "8005:8000"
+      - "8008:8000"
     restart: unless-stopped

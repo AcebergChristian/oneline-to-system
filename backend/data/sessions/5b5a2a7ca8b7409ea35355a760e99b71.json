@@ -4,7 +4,7 @@
   "project_slug": "project6",
   "status": "running",
   "last_message": "项目结构完整，所有文件已创建完毕。\n\n---\n\n## ✅ 项目创建完成\n\n### 项目结构\n\n```\nproject/project6/\n├── docker-compose.yml          # 编排前端(3006)和后端(8000)\n├── backend/\n│   ├── Dockerfile\n│   ├── .dockerignore\n│   ├── requirements.txt\n│   └── main.py                 # FastAPI 后端，保存/读取分数(JSON)\n├── frontend/\n│   ├── Dockerfile\n│   ├── .dockerignore\n│   ├── package.json\n│   ├── public/index.html\n│   └── src/\n│       ├── index.js\n│       ├── App.js              # 主组件，游戏逻辑+键盘/触控支持\n│       ├── App.css             # 完整样式\n│       ├── game/\n│       │   └── gameLogic.js    # 2048核心算法（win=1024）\n│       └── components/\n│           ├── GameBoard.js    # 4x4游戏面板\n│           ├── ScoreBoard.js   # 分数+历史最高分列表\n│           └── GameOverModal.js # 成功/失败弹窗+动画\n```\n\n### 功能特性\n\n| 功能 | 说明 |\n|------|------|\n| 🎮 **游戏玩法** | 方向键/滑动合并方块，与2048相同 |\n| 🏆 **目标** | 合成 **1024** 即胜利 |\n| 📊 **分数统计** | 实时分数、最高分、最大方块 |\n| 🏅 **历史记录** | 显示最近10次游戏记录，🏆标记通关 |\n| 🎉 **成功效果** | 金色边框弹窗 + 🎉 图标 + 动画 |\n| 💀 **失败效果** | 红色边框弹窗 + 😵 图标 + 动画 |\n| 📱 **触控支持** | 手机滑动操作 |\n| 💾 **数据持久化** | 后端JSON文件存储，重启不丢失 |\n\n### 启动命令\n\n```bash\ncd project/project6\ndocker-compose up --build\n```\n\n- **前端预览**: http://localhost:3006\n- **后端API**: http://localhost:8000\n- **API端点**: `GET /api/scores` 获取历史分数，`POST /api/scores` 保存分数",
-  "updated_at": "2026-07-22T03:16:54.882732",
+  "updated_at": "2026-08-19T09:02:06.245562",
   "messages": [
     {
       "role": "user",
@@ -1180,7 +1180,128 @@
         },
         "service_state_error": ""
       }
+    },
+    {
+      "type": "status",
+      "content": "项目启动结果: running.\n预览地址: http://localhost:8007\n失败原因: 无\ncompose ps: \ncompose logs: \nstderr: time=\"2026-08-19T08:56:46Z\" level=warning msg=\"Docker Compose is configured to build using Bake, but buildx isn't installed\"\n app  Built\n Container project6-app-1  Recreate\n Container project6-app-1  Recreated\n Container project6-app-1  Starting\n Container project6-app-1  Started\n\nstdout: p stage-1 5/6] COPY backend/ ./backend/\n#16 CACHED\n\n#17 [app stage-1 6/6] COPY --from=frontend-build /out ./static\n#17 DONE 0.0s\n\n#18 [app] exporting to image\n#18 exporting layers 0.0s done\n#18 exporting manifest sha256:7edb1b220407f9f2857c659ffae593ae7dde44204bbde9d0ca98313ffaf1d954 done\n#18 exporting config sha256:f0cd7c030381d8e2df43a735d5da5eb68469f439d54099a66d8343442b451a30 done\n#18 exporting attestation manifest sha256:b4e78ac1e9d5a0daf6248088720b7138007c2ce24328a8a3234ef3ab1b1fd163 done\n#18 exporting manifest list sha256:bc58a94dc07ba50cf915b9c20d144d40eecad629f9bb07d7039dea7913124eed done\n#18 naming to docker.io/library/project6-app:latest done\n#18 unpacking to docker.io/library/project6-app:latest done\n#18 DONE 0.1s\n\n#19 [app] resolving provenance for metadata file\n#19 DONE 0.1s\n\n如果需要修复，请继续在当前会话直接描述要补什么，Agent 会基于现有 project 和失败日志继续修改。",
+      "created_at": "2026-08-19T09:00:31.498475",
+      "metadata": {
+        "session_id": "5b5a2a7ca8b7409ea35355a760e99b71",
+        "project_slug": "project6",
+        "path": "project/project6",
+        "preview_url": "http://localhost:8007",
+        "backend_url": "http://localhost:8007",
+        "internal_backend_url": "http://host.docker.internal:8007",
+        "host_port": 8007,
+        "internal_port": 8000,
+        "runtime_status": "running",
+        "started_at": "2026-08-19T09:00:31.492042",
+        "command": [
+          "/usr/local/bin/docker",
+          "compose",
+          "-p",
+          "project6",
+          "-f",
+          "/app/project/project6/docker-compose.yml",
+          "up",
+          "-d",
+          "--build",
+          "--remove-orphans"
+        ],
+        "returncode": 0,
+        "stdout": "ed @babel/plugin-proposal-nullish-coalescing-operator@7.18.6: This proposal has been merged to the ECMAScript standard and thus this plugin is no longer maintained. Please use @babel/plugin-transform-nullish-coalescing-operator instead.\n#10 200.8 npm warn deprecated @babel/plugin-proposal-class-properties@7.18.6: This proposal has been merged to the ECMAScript standard and thus this plugin is no longer maintained. Please use @babel/plugin-transform-class-properties instead.\n#10 200.8 npm warn deprecated @babel/plugin-proposal-optional-chaining@7.21.0: This proposal has been merged to the ECMAScript standard and thus this plugin is no longer maintained. Please use @babel/plugin-transform-optional-chaining instead.\n#10 202.7 npm warn deprecated svgo@1.3.2: This SVGO version is no longer supported. Upgrade to v2.x.x.\n#10 214.2 npm warn deprecated @babel/plugin-proposal-private-property-in-object@7.21.11: This proposal has been merged to the ECMAScript standard and thus this plugin is no longer maintained. Please use @babel/plugin-transform-private-property-in-object instead.\n#10 215.8 npm warn deprecated eslint@8.57.1: This version is no longer supported. Please see https://eslint.org/version-support for other options.\n#10 216.2 \n#10 216.2 added 1294 packages in 4m\n#10 216.2 npm notice\n#10 216.2 npm notice New major version of npm available! 10.8.2 -> 12.0.2\n#10 216.2 npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.0.2\n#10 216.2 npm notice To update run: npm install -g npm@12.0.2\n#10 216.2 npm notice\n#10 DONE 217.2s\n\n#11 [app frontend-build 5/6] RUN npm run build\n#11 0.483 \n#11 0.483 > game1024@1.0.0 build\n#11 0.483 > react-scripts build\n#11 0.483 \n#11 1.111 Creating an optimized production build...\n#11 3.503 Compiled successfully.\n#11 3.503 \n#11 3.503 File sizes after gzip:\n#11 3.503 \n#11 3.516   47.78 kB  build/static/js/main.a372f5cb.js\n#11 3.516   1.31 kB   build/static/css/main.26b27fa8.css\n#11 3.516 \n#11 3.516 The project was built assuming it is hosted at /.\n#11 3.516 You can control this with the homepage field in your package.json.\n#11 3.517 \n#11 3.517 The build folder is ready to be deployed.\n#11 3.517 You may serve it with a static server:\n#11 3.517 \n#11 3.517   npm install -g serve\n#11 3.517   serve -s build\n#11 3.518 \n#11 3.518 Find out more about deployment here:\n#11 3.518 \n#11 3.518   https://cra.link/deployment\n#11 3.518 \n#11 DONE 3.7s\n\n#12 [app frontend-build 6/6] RUN if [ -d dist ]; then mv dist /out;     elif [ -d build ]; then mv build /out;     else mkdir -p /out && echo \"<h1>frontend build output not found</h1>\" > /out/index.html;     fi\n#12 DONE 0.1s\n\n#13 [app stage-1 2/6] WORKDIR /app\n#13 CACHED\n\n#14 [app stage-1 3/6] COPY backend/requirements.txt /tmp/requirements.txt\n#14 CACHED\n\n#15 [app stage-1 4/6] RUN set -e;     PIP_EXTRA=\"\";     if [ -n \"https://mirrors.aliyun.com/pypi/simple/\" ]; then PIP_EXTRA=\"--index-url https://mirrors.aliyun.com/pypi/simple/\"; fi;     if [ -n \"mirrors.aliyun.com\" ]; then PIP_EXTRA=\"$PIP_EXTRA --trusted-host mirrors.aliyun.com\"; fi;     pip install --no-cache-dir $PIP_EXTRA -r /tmp/requirements.txt;     pip install --no-cache-dir $PIP_EXTRA fastapi uvicorn\n#15 CACHED\n\n#16 [app stage-1 5/6] COPY backend/ ./backend/\n#16 CACHED\n\n#17 [app stage-1 6/6] COPY --from=frontend-build /out ./static\n#17 DONE 0.0s\n\n#18 [app] exporting to image\n#18 exporting layers 0.0s done\n#18 exporting manifest sha256:7edb1b220407f9f2857c659ffae593ae7dde44204bbde9d0ca98313ffaf1d954 done\n#18 exporting config sha256:f0cd7c030381d8e2df43a735d5da5eb68469f439d54099a66d8343442b451a30 done\n#18 exporting attestation manifest sha256:b4e78ac1e9d5a0daf6248088720b7138007c2ce24328a8a3234ef3ab1b1fd163 done\n#18 exporting manifest list sha256:bc58a94dc07ba50cf915b9c20d144d40eecad629f9bb07d7039dea7913124eed done\n#18 naming to docker.io/library/project6-app:latest done\n#18 unpacking to docker.io/library/project6-app:latest done\n#18 DONE 0.1s\n\n#19 [app] resolving provenance for metadata file\n#19 DONE 0.1s\n",
+        "stderr": "time=\"2026-08-19T08:56:46Z\" level=warning msg=\"Docker Compose is configured to build using Bake, but buildx isn't installed\"\n app  Built\n Container project6-app-1  Recreate\n Container project6-app-1  Recreated\n Container project6-app-1  Starting\n Container project6-app-1  Started\n",
+        "failure_reason": null,
+        "service_states": {
+          "app": "running"
+        },
+        "service_state_error": "",
+        "compose_ps": "",
+        "compose_logs": "",
+        "last_backend_check": "http://host.docker.internal:8007 :: http://host.docker.internal:8007/api/health -> http_200"
+      }
+    },
+    {
+      "type": "status",
+      "content": "项目启动结果: running.\n预览地址: http://localhost:8007\n失败原因: 无\ncompose ps: \ncompose logs: \nstderr: time=\"2026-08-19T09:02:00Z\" level=warning msg=\"Docker Compose is configured to build using Bake, but buildx isn't installed\"\n app  Built\n Container project6-app-1  Recreate\n Container project6-app-1  Recreated\n Container project6-app-1  Starting\n Container project6-app-1  Started\n\nstdout: stall --no-cache-dir $PIP_EXTRA fastapi uvicorn\n#16 CACHED\n\n#17 [app stage-1 6/6] COPY --from=frontend-build /out ./static\n#17 CACHED\n\n#18 [app] exporting to image\n#18 exporting layers done\n#18 exporting manifest sha256:7edb1b220407f9f2857c659ffae593ae7dde44204bbde9d0ca98313ffaf1d954 done\n#18 exporting config sha256:f0cd7c030381d8e2df43a735d5da5eb68469f439d54099a66d8343442b451a30 done\n#18 exporting attestation manifest sha256:0e4b7f470d7e92915e47bc57477826c5194008ac8e5c09b47d593265c138d9b9 done\n#18 exporting manifest list sha256:dc7af2537fc1b9a1ed8105ab7239eb10e5dc4a5f15fe6d1c3df1e2829a825813 done\n#18 naming to docker.io/library/project6-app:latest done\n#18 unpacking to docker.io/library/project6-app:latest done\n#18 DONE 0.0s\n\n#19 [app] resolving provenance for metadata file\n#19 DONE 0.0s\n\n如果需要修复，请继续在当前会话直接描述要补什么，Agent 会基于现有 project 和失败日志继续修改。",
+      "created_at": "2026-08-19T09:02:03.102072",
+      "metadata": {
+        "session_id": "5b5a2a7ca8b7409ea35355a760e99b71",
+        "project_slug": "project6",
+        "path": "project/project6",
+        "preview_url": "http://localhost:8007",
+        "backend_url": "http://localhost:8007",
+        "internal_backend_url": "http://host.docker.internal:8007",
+        "host_port": 8007,
+        "internal_port": 8000,
+        "runtime_status": "running",
+        "started_at": "2026-08-19T09:02:03.097624",
+        "command": [
+          "/usr/local/bin/docker",
+          "compose",
+          "-p",
+          "project6",
+          "-f",
+          "/app/project/project6/docker-compose.yml",
+          "up",
+          "-d",
+          "--build",
+          "--remove-orphans"
+        ],
+        "returncode": 0,
+        "stdout": "#0 building with \"default\" instance using docker driver\n\n#1 [app internal] load build definition from Dockerfile\n#1 transferring dockerfile: 1.50kB done\n#1 DONE 0.0s\n\n#2 [app internal] load metadata for docker.io/library/python:3.11-slim\n#2 DONE 0.0s\n\n#3 [app internal] load metadata for docker.io/library/node:20-alpine\n#3 DONE 0.0s\n\n#4 [app internal] load .dockerignore\n#4 transferring context: 137B done\n#4 DONE 0.0s\n\n#5 [app stage-1 1/6] FROM docker.io/library/python:3.11-slim@sha256:f9fa7f851e38bfb19c9de3afbc4b86ae7176ea7aaf94535c31df5458d5849457\n#5 resolve docker.io/library/python:3.11-slim@sha256:f9fa7f851e38bfb19c9de3afbc4b86ae7176ea7aaf94535c31df5458d5849457 done\n#5 DONE 0.0s\n\n#6 [app frontend-build 1/6] FROM docker.io/library/node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293\n#6 resolve docker.io/library/node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 done\n#6 DONE 0.0s\n\n#7 [app internal] load build context\n#7 transferring context: 25.85kB 0.0s done\n#7 DONE 0.0s\n\n#8 [app frontend-build 6/6] RUN if [ -d dist ]; then mv dist /out;     elif [ -d build ]; then mv build /out;     else mkdir -p /out && echo \"<h1>frontend build output not found</h1>\" > /out/index.html;     fi\n#8 CACHED\n\n#9 [app stage-1 2/6] WORKDIR /app\n#9 CACHED\n\n#10 [app frontend-build 2/6] WORKDIR /app/frontend\n#10 CACHED\n\n#11 [app frontend-build 5/6] RUN npm run build\n#11 CACHED\n\n#12 [app stage-1 3/6] COPY backend/requirements.txt /tmp/requirements.txt\n#12 CACHED\n\n#13 [app frontend-build 3/6] COPY frontend/ ./\n#13 CACHED\n\n#14 [app stage-1 5/6] COPY backend/ ./backend/\n#14 CACHED\n\n#15 [app frontend-build 4/6] RUN if [ -n \"https://registry.npmmirror.com\" ]; then       npm install --registry=\"https://registry.npmmirror.com\" --no-audit --no-fund;     else       npm install --no-audit --no-fund;     fi\n#15 CACHED\n\n#16 [app stage-1 4/6] RUN set -e;     PIP_EXTRA=\"\";     if [ -n \"https://mirrors.aliyun.com/pypi/simple/\" ]; then PIP_EXTRA=\"--index-url https://mirrors.aliyun.com/pypi/simple/\"; fi;     if [ -n \"mirrors.aliyun.com\" ]; then PIP_EXTRA=\"$PIP_EXTRA --trusted-host mirrors.aliyun.com\"; fi;     pip install --no-cache-dir $PIP_EXTRA -r /tmp/requirements.txt;     pip install --no-cache-dir $PIP_EXTRA fastapi uvicorn\n#16 CACHED\n\n#17 [app stage-1 6/6] COPY --from=frontend-build /out ./static\n#17 CACHED\n\n#18 [app] exporting to image\n#18 exporting layers done\n#18 exporting manifest sha256:7edb1b220407f9f2857c659ffae593ae7dde44204bbde9d0ca98313ffaf1d954 done\n#18 exporting config sha256:f0cd7c030381d8e2df43a735d5da5eb68469f439d54099a66d8343442b451a30 done\n#18 exporting attestation manifest sha256:0e4b7f470d7e92915e47bc57477826c5194008ac8e5c09b47d593265c138d9b9 done\n#18 exporting manifest list sha256:dc7af2537fc1b9a1ed8105ab7239eb10e5dc4a5f15fe6d1c3df1e2829a825813 done\n#18 naming to docker.io/library/project6-app:latest done\n#18 unpacking to docker.io/library/project6-app:latest done\n#18 DONE 0.0s\n\n#19 [app] resolving provenance for metadata file\n#19 DONE 0.0s\n",
+        "stderr": "time=\"2026-08-19T09:02:00Z\" level=warning msg=\"Docker Compose is configured to build using Bake, but buildx isn't installed\"\n app  Built\n Container project6-app-1  Recreate\n Container project6-app-1  Recreated\n Container project6-app-1  Starting\n Container project6-app-1  Started\n",
+        "failure_reason": null,
+        "service_states": {
+          "app": "running"
+        },
+        "service_state_error": "",
+        "compose_ps": "",
+        "compose_logs": "",
+        "last_backend_check": "http://host.docker.internal:8007 :: http://host.docker.internal:8007/api/health -> http_200"
+      }
+    },
+    {
+      "type": "status",
+      "content": "项目启动结果: running.\n预览地址: http://localhost:8007\n失败原因: 无\ncompose ps: \ncompose logs: \nstderr: time=\"2026-08-19T09:02:03Z\" level=warning msg=\"Docker Compose is configured to build using Bake, but buildx isn't installed\"\n app  Built\n Container project6-app-1  Recreate\n Container project6-app-1  Recreated\n Container project6-app-1  Starting\n Container project6-app-1  Started\n\nstdout:  backend/requirements.txt /tmp/requirements.txt\n#16 CACHED\n\n#17 [app stage-1 6/6] COPY --from=frontend-build /out ./static\n#17 CACHED\n\n#18 [app] exporting to image\n#18 exporting layers done\n#18 exporting manifest sha256:7edb1b220407f9f2857c659ffae593ae7dde44204bbde9d0ca98313ffaf1d954 done\n#18 exporting config sha256:f0cd7c030381d8e2df43a735d5da5eb68469f439d54099a66d8343442b451a30 done\n#18 exporting attestation manifest sha256:64b312b4dc1d43291f35c560f68267fb758b519ac1a52c5fd1ee8b3bb8117f79 done\n#18 exporting manifest list sha256:68e1bd5164efc71237e65cd135d4a95745ded59761c3bd14e92471ee959c1636 done\n#18 naming to docker.io/library/project6-app:latest done\n#18 unpacking to docker.io/library/project6-app:latest done\n#18 DONE 0.0s\n\n#19 [app] resolving provenance for metadata file\n#19 DONE 0.0s\n\n如果需要修复，请继续在当前会话直接描述要补什么，Agent 会基于现有 project 和失败日志继续修改。",
+      "created_at": "2026-08-19T09:02:06.244197",
+      "metadata": {
+        "session_id": "5b5a2a7ca8b7409ea35355a760e99b71",
+        "project_slug": "project6",
+        "path": "project/project6",
+        "preview_url": "http://localhost:8007",
+        "backend_url": "http://localhost:8007",
+        "internal_backend_url": "http://host.docker.internal:8007",
+        "host_port": 8007,
+        "internal_port": 8000,
+        "runtime_status": "running",
+        "started_at": "2026-08-19T09:02:06.241198",
+        "command": [
+          "/usr/local/bin/docker",
+          "compose",
+          "-p",
+          "project6",
+          "-f",
+          "/app/project/project6/docker-compose.yml",
+          "up",
+          "-d",
+          "--build",
+          "--remove-orphans"
+        ],
+        "returncode": 0,
+        "stdout": "#0 building with \"default\" instance using docker driver\n\n#1 [app internal] load build definition from Dockerfile\n#1 transferring dockerfile: 1.50kB done\n#1 DONE 0.0s\n\n#2 [app internal] load metadata for docker.io/library/python:3.11-slim\n#2 DONE 0.0s\n\n#3 [app internal] load metadata for docker.io/library/node:20-alpine\n#3 DONE 0.0s\n\n#4 [app internal] load .dockerignore\n#4 transferring context: 137B done\n#4 DONE 0.0s\n\n#5 [app stage-1 1/6] FROM docker.io/library/python:3.11-slim@sha256:f9fa7f851e38bfb19c9de3afbc4b86ae7176ea7aaf94535c31df5458d5849457\n#5 resolve docker.io/library/python:3.11-slim@sha256:f9fa7f851e38bfb19c9de3afbc4b86ae7176ea7aaf94535c31df5458d5849457 0.0s done\n#5 DONE 0.0s\n\n#6 [app frontend-build 1/6] FROM docker.io/library/node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293\n#6 resolve docker.io/library/node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 0.0s done\n#6 DONE 0.0s\n\n#7 [app internal] load build context\n#7 transferring context: 3.67kB done\n#7 DONE 0.0s\n\n#8 [app frontend-build 5/6] RUN npm run build\n#8 CACHED\n\n#9 [app frontend-build 3/6] COPY frontend/ ./\n#9 CACHED\n\n#10 [app stage-1 2/6] WORKDIR /app\n#10 CACHED\n\n#11 [app stage-1 5/6] COPY backend/ ./backend/\n#11 CACHED\n\n#12 [app frontend-build 6/6] RUN if [ -d dist ]; then mv dist /out;     elif [ -d build ]; then mv build /out;     else mkdir -p /out && echo \"<h1>frontend build output not found</h1>\" > /out/index.html;     fi\n#12 CACHED\n\n#13 [app frontend-build 2/6] WORKDIR /app/frontend\n#13 CACHED\n\n#14 [app stage-1 4/6] RUN set -e;     PIP_EXTRA=\"\";     if [ -n \"https://mirrors.aliyun.com/pypi/simple/\" ]; then PIP_EXTRA=\"--index-url https://mirrors.aliyun.com/pypi/simple/\"; fi;     if [ -n \"mirrors.aliyun.com\" ]; then PIP_EXTRA=\"$PIP_EXTRA --trusted-host mirrors.aliyun.com\"; fi;     pip install --no-cache-dir $PIP_EXTRA -r /tmp/requirements.txt;     pip install --no-cache-dir $PIP_EXTRA fastapi uvicorn\n#14 CACHED\n\n#15 [app frontend-build 4/6] RUN if [ -n \"https://registry.npmmirror.com\" ]; then       npm install --registry=\"https://registry.npmmirror.com\" --no-audit --no-fund;     else       npm install --no-audit --no-fund;     fi\n#15 CACHED\n\n#16 [app stage-1 3/6] COPY backend/requirements.txt /tmp/requirements.txt\n#16 CACHED\n\n#17 [app stage-1 6/6] COPY --from=frontend-build /out ./static\n#17 CACHED\n\n#18 [app] exporting to image\n#18 exporting layers done\n#18 exporting manifest sha256:7edb1b220407f9f2857c659ffae593ae7dde44204bbde9d0ca98313ffaf1d954 done\n#18 exporting config sha256:f0cd7c030381d8e2df43a735d5da5eb68469f439d54099a66d8343442b451a30 done\n#18 exporting attestation manifest sha256:64b312b4dc1d43291f35c560f68267fb758b519ac1a52c5fd1ee8b3bb8117f79 done\n#18 exporting manifest list sha256:68e1bd5164efc71237e65cd135d4a95745ded59761c3bd14e92471ee959c1636 done\n#18 naming to docker.io/library/project6-app:latest done\n#18 unpacking to docker.io/library/project6-app:latest done\n#18 DONE 0.0s\n\n#19 [app] resolving provenance for metadata file\n#19 DONE 0.0s\n",
+        "stderr": "time=\"2026-08-19T09:02:03Z\" level=warning msg=\"Docker Compose is configured to build using Bake, but buildx isn't installed\"\n app  Built\n Container project6-app-1  Recreate\n Container project6-app-1  Recreated\n Container project6-app-1  Starting\n Container project6-app-1  Started\n",
+        "failure_reason": null,
+        "service_states": {
+          "app": "running"
+        },
+        "service_state_error": "",
+        "compose_ps": "",
+        "compose_logs": "",
+        "last_backend_check": "http://host.docker.internal:8007 :: http://host.docker.internal:8007/api/health -> http_200"
+      }
     }
   ],
-  "preview_url": "http://localhost:3006"
+  "preview_url": "http://localhost:8007",
+  "backend_url": "http://localhost:8007"
 }

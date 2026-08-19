@@ -12,7 +12,7 @@ from fastapi.staticfiles import StaticFiles
 import uvicorn
 
 from utils.agent import build_session, persist_stream, stream_agent_run
-from utils.config import backend_url_for_slug, ensure_data_dirs, get_settings, preview_url_for_slug
+from utils.config import backend_url_for_slug, ensure_data_dirs, get_settings
 from utils.logger import extract_session_id_from_request, log_session_event, log_system_event
 from utils.project_tools import run_tool_action
 from utils.project_runner import refresh_project_entry_runtime, start_project_for_session
@@ -94,8 +94,14 @@ def get_session(session_id: str):
     session = load_session(session_id)
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found")
-    session.preview_url = preview_url_for_slug(session.project_slug)
-    session.backend_url = backend_url_for_slug(session.project_slug)
+    # 优先使用启动时真实分配的端口(记录在项目元信息里);
+    # 尚未启动过的项目先用约定的后端端口占位(单端口部署,预览=后端)。
+    from utils.storage import get_project_meta
+
+    meta = get_project_meta(session_id)
+    assigned_url = (meta or {}).get("backend_url") or backend_url_for_slug(session.project_slug)
+    session.preview_url = assigned_url
+    session.backend_url = assigned_url
     return session
 
 

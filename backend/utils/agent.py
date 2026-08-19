@@ -9,7 +9,7 @@ from uuid import uuid4
 
 from openai import OpenAI
 
-from .config import PROJECT_ROOT, backend_url_for_slug, get_settings, preview_url_for_slug
+from .config import PROJECT_ROOT, backend_url_for_slug, get_settings
 from .logger import log_session_event
 from .project_tools import run_tool_action
 from .schemas import Message, SessionDetail, StepEvent, ToolAction, ToolResult
@@ -24,34 +24,36 @@ You must create a real project inside the assigned project directory using only 
 Rules:
 - You may only operate inside the assigned project root.
 - Never read or write any .env file or any path outside the assigned project root.
-- Build a complete deliverable for the user's request:
-  - frontend/
-  - backend/
-  - Dockerfile
-  - docker-compose.yml
-- The frontend stack must be React.
-- The backend stack must be Python FastAPI.
-- Data storage inside generated projects should use JSON or JSONL files rather than a database unless the user explicitly asks otherwise.
+- Build a complete deliverable for the user's request with exactly this layout:
+  - frontend/   (React + Vite source code)
+  - backend/    (Python FastAPI source code)
+- Do NOT create Dockerfile, docker-compose.yml, nginx.conf or any deployment file.
+  The platform automatically generates deployment files and starts the project;
+  deployment is a single container where the frontend is built and then served
+  as static files by the backend. Only one port is ever published.
+- The frontend stack must be React with Vite (package.json must define a "build": "vite build" script).
+- The backend stack must be Python FastAPI:
+  - backend/main.py must define a FastAPI instance named `app`.
+  - Always provide GET /api/health returning a small JSON object.
+  - backend/requirements.txt must list the dependencies (fastapi and uvicorn included).
+- Data storage inside generated projects should use JSON or JSONL files under backend/data/
+  rather than a database unless the user explicitly asks otherwise.
 - Keep files practical and runnable. Prefer a small but real implementation over placeholders.
 - If you need to inspect existing generated files, use tools first.
-- Every generated project must use its own backend port and must not reuse the main controller backend port.
-- Port assignment is mandatory:
-  - project1 => frontend 3001, backend 8001
-  - project2 => frontend 3002, backend 8002
-  - projectN => frontend 300N, backend 800N
-- Generated project files must consistently use those exact ports in:
-  - backend app startup command
-  - backend Dockerfile EXPOSE/CMD
-  - frontend dev/build config if a port is required
-  - docker-compose.yml port mappings
-  - frontend API base URL fallback logic
-- Never leave a generated subproject backend on 8000 unless it is only an internal container port and the published host port still follows 800N.
-- Frontend code must not assume the browser can access `localhost` on deployed servers. If an API base URL is configurable, use the configured value when valid, otherwise derive the host from `window.location.hostname` and only keep the project-specific backend port.
+
+Port rules (important):
+- Never write any port number anywhere: no ports in source code, config files or scripts.
+- The container runtime starts the backend automatically; the platform assigns a unique
+  host port for each project and never reuses a port that is already taken.
+- Frontend code must call the backend with same-origin relative URLs only, e.g.
+  fetch('/api/items'). Never hardcode http://localhost, 127.0.0.1 or any port,
+  because the frontend is served by the backend itself in production.
 
 Execution contract:
 - First produce a concise execution plan.
-- Then call tools to create directories and files.
-- After tool execution is complete, return a concise final summary that mentions what was created and any startup commands.
+- Then call tools to create directories and files (frontend/ and backend/ source only).
+- After tool execution is complete, return a concise final summary that mentions what was
+  created and remind the user to press the start button (the platform handles build & deploy).
 """.strip()
 
 
@@ -78,15 +80,12 @@ def next_project_slug() -> str:
     return f"project{index}"
 
 
-def project_ports(project_slug: str) -> tuple[int, int]:
-    match = re.search(r"(\d+)$", project_slug)
-    index = int(match.group(1)) if match else 1
-    return 3000 + index, 8000 + index
-
 def build_session(prompt: str) -> SessionDetail:
     session_id = uuid4().hex
     project_slug = next_project_slug()
     title = prompt[:24] or "New Session"
+    # 单端口部署:预览地址与后端地址相同;真实端口在启动时由端口分配器决定
+    assigned_url = backend_url_for_slug(project_slug)
     session = SessionDetail(
         id=session_id,
         title=title,
@@ -95,8 +94,8 @@ def build_session(prompt: str) -> SessionDetail:
         last_message=prompt,
         messages=[Message(role="user", content=prompt)],
         steps=[],
-        preview_url=preview_url_for_slug(project_slug),
-        backend_url=backend_url_for_slug(project_slug),
+        preview_url=assigned_url,
+        backend_url=assigned_url,
     )
     create_session(session)
     log_session_event(
@@ -135,7 +134,6 @@ def _project_metadata(session: SessionDetail) -> dict[str, Any]:
 
 def _tool_specs(project_slug: str, preview_url: str) -> list[dict[str, Any]]:
     backend_url = backend_url_for_slug(project_slug)
-    frontend_port, backend_port = project_ports(project_slug)
     path_description = (
         f"Relative path inside project/{project_slug}. "
         "Do not use absolute paths. Do not target .env files."
@@ -192,12 +190,13 @@ def _tool_specs(project_slug: str, preview_url: str) -> list[dict[str, Any]]:
                 "name": "write",
                 "description": (
                     f"Write a UTF-8 text file inside project/{project_slug}. "
-                    f"Use this to create frontend, backend, Dockerfile and docker-compose.yml. "
-                    f"Generated app should be previewable at {preview_url} when the frontend is started. "
-                    f"This project must use frontend port {frontend_port} and backend port {backend_port}. "
-                    f"The generated backend API must use the project-specific port {backend_url}, not the controller backend port 8000. "
-                    "Do not hardcode browser requests to localhost for deployed environments. "
-                    "Keep the port plan consistent across source code, Dockerfiles, and docker-compose."
+                    "Use this to create frontend/ (React + Vite) and backend/ (FastAPI) source code only. "
+                    "Do NOT write Dockerfile, docker-compose.yml, nginx.conf or any deployment file: "
+                    "the platform generates them automatically and deploys the project as a single container "
+                    "where the backend serves the built frontend. "
+                    "Never hardcode ports; the frontend must call the backend with relative /api URLs. "
+                    f"After startup the project will be reachable at {preview_url} (indicative; "
+                    f"the platform assigns the real unique port, expected around {backend_url})."
                 ),
                 "parameters": {
                     "type": "object",
@@ -221,13 +220,14 @@ def _runtime_context(session: SessionDetail) -> str:
     return (
         "Latest project runtime context:\n"
         f"- runtime_status: {project.get('runtime_status', 'unknown')}\n"
-        f"- preview_url: {project.get('preview_url', session.preview_url or '')}\n"
-        f"- backend_url: {project.get('backend_url', backend_url_for_slug(session.project_slug))}\n"
+        f"- project_url: {project.get('backend_url', backend_url_for_slug(session.project_slug))}\n"
         f"- failure_reason: {project.get('failure_reason', '')}\n"
         f"- last_command: {project.get('command', [])}\n"
         f"- stdout_tail: {project.get('stdout', '')[-1200:]}\n"
         f"- stderr_tail: {project.get('stderr', '')[-1200:]}\n"
-        "If the user asks to fix startup, inspect the current files first and then update the generated project."
+        "Deployment files (Dockerfile, docker-compose.yml, backend/_dw_serve.py) are managed by the platform; "
+        "do not rewrite them. If the user asks to fix startup, inspect and update the frontend/ and backend/ "
+        "source code instead."
     )
 
 
@@ -334,10 +334,10 @@ async def stream_agent_run(session: SessionDetail, prompt: str):
                 "content": (
                     f"{SYSTEM_PROMPT}\n\n"
                     f"Assigned project root: project/{project_slug}\n"
-                    f"Required preview URL target: {session.preview_url}\n"
-                    f"Required backend API target: {backend_url_for_slug(project_slug)}\n"
+                    f"Project URL shown to the user (indicative): {session.preview_url}\n"
                     f"{_runtime_context(session)}\n"
-                    "Create a real implementation now."
+                    "Create a real implementation now: frontend/ (React + Vite) and backend/ (FastAPI) "
+                    "source code only. Deployment is handled by the platform."
                 ),
             },
             *_chat_messages_from_history(history),

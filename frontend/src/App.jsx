@@ -16,7 +16,6 @@ import { PreviewPanel } from './components/PreviewPanel'
 import { Sidebar } from './components/Sidebar'
 import { TaskPanel } from './components/TaskPanel'
 import { api, openSessionStream } from './lib/api'
-import { getProjectPreviewUrl } from './lib/projectUrls'
 
 const ROUTES = {
   landing: '/',
@@ -66,8 +65,8 @@ const DOC_SECTIONS = [
     id: 'deploy',
     title: '项目启动与预览',
     content: [
-      '生成出来的项目默认按 `project/projectN/frontend`、`backend`、`docker-compose.yml`、`Dockerfile` 的结构组织。',
-      '启动时主控后端会尝试做 compose 启动、容器状态探测、前端 URL 检查和后端健康检查，再把结果返回给前端。',
+      '生成出来的项目只包含 `project/projectN/frontend` 与 `backend` 源码;Dockerfile、docker-compose.yml 由平台在启动时自动生成。',
+      '启动时平台会分配一个未被占用的端口,构建并用单容器部署:前端 build 产物由后端同端口托管,只需访问这一个端口。',
       '如果 Docker 本机服务异常，前端会看到明确的失败分析，并提供一键回填修复提示词。',
     ],
   },
@@ -370,6 +369,7 @@ function Workspace({
   setWorkspacePrompt,
   isStreaming,
   startingProject,
+  startingProjectIds,
   showCreateModal,
   newSessionPrompt,
   uiMessage,
@@ -389,6 +389,8 @@ function Workspace({
       <div className="grid min-h-screen grid-cols-1 overflow-hidden lg:h-screen lg:grid-cols-[260px_minmax(480px,1fr)_420px] lg:[&>*]:min-h-0">
         <Sidebar
           sessions={sessions}
+          projects={projects}
+          startingProjectIds={startingProjectIds}
           activeId={activeSessionId}
           onSelect={onSelect}
           onCreateSession={onOpenCreateModal}
@@ -456,19 +458,25 @@ export default function App() {
   const [workspacePrompt, setWorkspacePrompt] = useState('')
   const [newSessionPrompt, setNewSessionPrompt] = useState('')
   const [showCreateModal, setShowCreateModal] = useState(false)
-  const [startingProject, setStartingProject] = useState(false)
+  // 启动中 / 失败分析 / 提示消息都按会话记录,切换会话时各自独立
+  const [startingProjectIds, setStartingProjectIds] = useState({})
+  const [failureSessionIds, setFailureSessionIds] = useState({})
+  const [uiMessages, setUiMessages] = useState({})
   const [isStreaming, setIsStreaming] = useState(false)
-  const [showFailureAnalysis, setShowFailureAnalysis] = useState(false)
-  const [uiMessage, setUiMessage] = useState('')
   const eventSourceRef = useRef(null)
-  const messageTimerRef = useRef(null)
+  const messageTimersRef = useRef({})
+  const activeSessionIdRef = useRef('')
 
-  function pushMessage(message) {
-    setUiMessage(message)
-    window.clearTimeout(messageTimerRef.current)
-    messageTimerRef.current = window.setTimeout(() => {
-      setUiMessage('')
-    }, 5000)
+  useEffect(() => {
+    activeSessionIdRef.current = activeSessionId
+  }, [activeSessionId])
+
+  function pushMessage(sessionId, message) {
+    setUiMessages((current) => ({ ...current, [sessionId]: message }))
+    window.clearTimeout(messageTimersRef.current[sessionId])
+    messageTimersRef.current[sessionId] = window.setTimeout(() => {
+      setUiMessages((current) => ({ ...current, [sessionId]: '' }))
+    }, 6000)
   }
 
   async function refreshSessions(nextActiveId) {
@@ -492,9 +500,21 @@ export default function App() {
       if (eventSourceRef.current) {
         eventSourceRef.current.close()
       }
-      window.clearTimeout(messageTimerRef.current)
+      Object.values(messageTimersRef.current).forEach((timer) => window.clearTimeout(timer))
     }
   }, [])
+
+  // 只刷新列表与当前会话详情,不改变用户正在查看的会话(避免把用户拽回刚启动的会话)
+  async function refreshData() {
+    const [sessionList, projectList] = await Promise.all([api.listSessions(), api.listProjects()])
+    setSessions(sessionList)
+    setProjects(projectList)
+    const currentId = activeSessionIdRef.current
+    if (currentId) {
+      const detail = await api.getSession(currentId)
+      setActiveSession(detail)
+    }
+  }
 
   async function attachStream(sessionId) {
     if (eventSourceRef.current) {
@@ -552,7 +572,6 @@ export default function App() {
       eventSourceRef.current.close()
     }
     setIsStreaming(false)
-    setShowFailureAnalysis(false)
     const detail = await api.getSession(sessionId)
     setActiveSessionId(sessionId)
     setActiveSession(detail)
@@ -565,7 +584,6 @@ export default function App() {
     }
     setIsStreaming(false)
     setWorkspacePrompt('')
-    setShowFailureAnalysis(false)
     navigate(ROUTES.landing)
   }
 
@@ -580,28 +598,33 @@ export default function App() {
   }
 
   async function handleStartProject() {
-    if (!activeSessionId) return
-    setStartingProject(true)
-    setShowFailureAnalysis(false)
-    pushMessage('正在启动项目。首次构建镜像可能需要 1-3 分钟，请稍等。')
+    const sessionId = activeSessionId
+    if (!sessionId || startingProjectIds[sessionId]) return
+    setStartingProjectIds((current) => ({ ...current, [sessionId]: true }))
+    setFailureSessionIds((current) => ({ ...current, [sessionId]: false }))
+    pushMessage(sessionId, '正在启动项目。首次构建镜像可能需要 1-3 分钟，请稍等。')
     try {
-      const result = await api.startProject(activeSessionId)
-      await refreshSessions(activeSessionId)
-      pushMessage(`项目启动请求已发送，状态：${result.runtime_status || 'unknown'}。`)
-      setShowFailureAnalysis(result.runtime_status === 'failed')
-      const previewUrl = getProjectPreviewUrl({ ...result, session_id: activeSessionId }, activeSession)
-      if (previewUrl) {
-        window.open(previewUrl, '_blank', 'noopener,noreferrer')
-      }
-    } catch (error) {
-      setShowFailureAnalysis(true)
-      if (String(error.message).includes('Not Found')) {
-        pushMessage('启动接口不存在。先重启后端 `python3 backend/main.py`，再点一次启动项目。')
+      const result = await api.startProject(sessionId)
+      await refreshData()
+      if (result.runtime_status === 'running') {
+        pushMessage(sessionId, `项目已启动：${result.preview_url || ''}，右侧预览已刷新。`)
       } else {
-        pushMessage(error.message || '启动项目失败')
+        pushMessage(sessionId, `启动结束，状态：${result.runtime_status || 'unknown'}。`)
+      }
+      setFailureSessionIds((current) => ({ ...current, [sessionId]: result.runtime_status === 'failed' }))
+    } catch (error) {
+      setFailureSessionIds((current) => ({ ...current, [sessionId]: true }))
+      if (String(error.message).includes('Not Found')) {
+        pushMessage(sessionId, '启动接口不存在。先重启后端 `python3 backend/main.py`，再点一次启动项目。')
+      } else {
+        pushMessage(sessionId, error.message || '启动项目失败')
       }
     } finally {
-      setStartingProject(false)
+      setStartingProjectIds((current) => {
+        const next = { ...current }
+        delete next[sessionId]
+        return next
+      })
     }
   }
 
@@ -628,11 +651,12 @@ export default function App() {
         workspacePrompt={workspacePrompt}
         setWorkspacePrompt={setWorkspacePrompt}
         isStreaming={isStreaming}
-        startingProject={startingProject}
+        startingProject={Boolean(startingProjectIds[activeSessionId])}
+        startingProjectIds={startingProjectIds}
         showCreateModal={showCreateModal}
         newSessionPrompt={newSessionPrompt}
-        uiMessage={uiMessage}
-        showFailureAnalysis={showFailureAnalysis}
+        uiMessage={uiMessages[activeSessionId] || ''}
+        showFailureAnalysis={Boolean(failureSessionIds[activeSessionId])}
         onSelect={handleSelect}
         onOpenCreateModal={() => setShowCreateModal(true)}
         onBackToLanding={handleBackToLanding}

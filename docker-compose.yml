@@ -7,6 +7,11 @@ services:
       - "${BACKEND_PORT:-8000}:8000"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      # 生成的子项目与会话数据必须持久化到宿主机:
+      # 否则容器一重建,项目目录和会话记录全部丢失,
+      # 项目编号会重置,新项目的端口就会和还在跑的旧容器冲突。
+      - ./project:/app/project
+      - ./backend/data:/app/backend/data
     env_file:
       - .env
     environment:

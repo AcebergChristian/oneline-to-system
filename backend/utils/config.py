@@ -30,6 +30,11 @@ class Settings(BaseSettings):
     public_base_url: str = ""
     project_preview_url_template: str = ""
     project_backend_url_template: str = ""
+    # 生成项目构建时使用的镜像源。置为 "off" 表示使用官方源。
+    # 默认使用国内镜像,避免 docker build 阶段 npm / pip 拉包失败导致项目启动不了。
+    npm_registry: str = "https://registry.npmmirror.com"
+    pip_index_url: str = "https://mirrors.aliyun.com/pypi/simple/"
+    pip_trusted_host: str = "mirrors.aliyun.com"
 
     model_config = SettingsConfigDict(
         env_file=str(ROOT_DIR / ".env"),
@@ -59,13 +64,20 @@ def project_index(project_slug: str) -> int:
     return int(match.group(1)) if match else 1
 
 
+def project_backend_port(project_slug: str) -> int:
+    """项目后端宿主端口的约定起点(真实端口以启动时的分配结果为准)。"""
+    return 8000 + project_index(project_slug)
+
+
 def _format_project_url(template: str, project_slug: str) -> str:
     index = project_index(project_slug)
+    backend_port = 8000 + index
     return template.format(
         project_slug=project_slug,
         project_index=index,
-        port_preview=3000 + index,
-        port_backend=8000 + index,
+        # 单端口部署:预览地址就是后端地址
+        port_preview=backend_port,
+        port_backend=backend_port,
     )
 
 
@@ -84,25 +96,21 @@ def _public_origin_without_port() -> str | None:
     return f"{parsed.scheme}://{hostname}"
 
 
-def preview_url_for_slug(project_slug: str) -> str:
-    settings = get_settings()
-    if settings.project_preview_url_template:
-        return _format_project_url(settings.project_preview_url_template, project_slug)
-
-    origin = _public_origin_without_port()
-    index = project_index(project_slug)
-    if origin:
-        return f"{origin}:{3000 + index}"
-    return f"http://localhost:{3000 + index}"
-
-
 def backend_url_for_slug(project_slug: str) -> str:
     settings = get_settings()
     if settings.project_backend_url_template:
         return _format_project_url(settings.project_backend_url_template, project_slug)
 
     origin = _public_origin_without_port()
-    index = project_index(project_slug)
+    port = project_backend_port(project_slug)
     if origin:
-        return f"{origin}:{8000 + index}"
-    return f"http://localhost:{8000 + index}"
+        return f"{origin}:{port}"
+    return f"http://localhost:{port}"
+
+
+def preview_url_for_slug(project_slug: str) -> str:
+    """单端口部署:前端由后端托管,预览地址与后端地址相同。"""
+    settings = get_settings()
+    if settings.project_preview_url_template:
+        return _format_project_url(settings.project_preview_url_template, project_slug)
+    return backend_url_for_slug(project_slug)

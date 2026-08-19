@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useRef } from 'react'
 import { ExternalLink, FolderTree, MonitorSmartphone, Play } from 'lucide-react'
 import { getProjectBackendUrl, getProjectPreviewUrl } from '../lib/projectUrls'
 
@@ -9,8 +9,7 @@ function buildFailureDetail(project) {
   const composeLogs = project?.compose_logs || ''
   const failureReason = project?.failure_reason || ''
   const combined = `${stderr}\n${stdout}\n${composePs}\n${composeLogs}`
-  const previewUrl = project?.preview_url || '当前前端地址'
-  const backendUrl = project?.backend_url || '当前后端地址'
+  const backendUrl = project?.backend_url || '当前项目地址'
   const serviceStates = project?.service_states || {}
   const serviceStateSummary = Object.keys(serviceStates).length
     ? Object.entries(serviceStates)
@@ -18,98 +17,101 @@ function buildFailureDetail(project) {
         .join(' / ')
     : '未拿到容器状态'
 
-  if (combined.includes('No such image')) {
+  const platformDeployNote =
+    'Dockerfile 与 docker-compose.yml 由平台自动生成和管理(单容器部署,前端 build 产物由后端同端口托管),不要让 Agent 修改部署文件,只需修复 frontend/ 与 backend/ 源码。'
+
+  if (combined.includes('npm run build') || combined.includes('npm ERR') || combined.includes('No such image')) {
     return {
-      title: '前端镜像不存在',
-      detail: '启动 fallback 时找不到已构建的前端镜像，说明前端构建阶段没有成功完成。',
-      prompt: '根据当前启动失败日志，先检查 project 里的 frontend Dockerfile、package.json 和 docker-compose.yml，补全或修复前端构建链路，然后重新启动项目。',
+      title: '前端构建失败',
+      detail: '前端 build 阶段没有成功完成,常见原因是 package.json 依赖或构建脚本报错。',
+      prompt: `根据当前启动失败日志,检查 project 里的 frontend/package.json、frontend 源码与构建脚本,修复前端构建报错后重新启动项目。${platformDeployNote}`,
     }
   }
 
   if (combined.includes('cannot connect to the docker daemon') || combined.includes('is the docker daemon running?')) {
     return {
       title: 'Docker 没有启动',
-      detail: '当前不是代码错误，是真机上的 Docker daemon 没在运行，所以镜像无法构建、容器也无法启动。',
-      prompt: `Docker 恢复后，请检查当前 project 的 docker-compose.yml、frontend Dockerfile 和 backend Dockerfile，确认前端 ${previewUrl} 与后端 ${backendUrl} 的启动链路正确，再重新启动项目。`,
+      detail: '当前不是代码错误,是真机上的 Docker daemon 没在运行,所以镜像无法构建、容器也无法启动。',
+      prompt: `Docker 恢复后,请直接重新点击启动项目即可,平台会自动重新构建并启动。项目地址应为 ${backendUrl}。`,
     }
   }
 
   if (combined.includes('pypi.org') || combined.includes('No matching distribution found')) {
     return {
       title: '后端依赖安装失败',
-      detail: 'Docker 构建 backend 镜像时访问 PyPI 失败，导致 FastAPI 依赖没有装上。',
-      prompt: '根据当前启动失败日志，检查 backend 的 requirements.txt、Dockerfile 和 docker-compose.yml，修复后端依赖安装或镜像复用方案，然后重新启动项目。',
+      detail: 'Docker 构建 backend 镜像时 Python 依赖下载失败,导致 FastAPI 依赖没有装上。',
+      prompt: `根据当前启动失败日志,检查 backend/requirements.txt 里的依赖版本是否存在可安装的版本(不要写死过老的版本号),修复后重新启动项目。${platformDeployNote}`,
     }
   }
 
   if (combined.includes('auth.docker.io') || combined.includes('registry-1.docker.io') || combined.includes('failed to resolve source metadata')) {
     return {
       title: 'Docker 基础镜像拉取失败',
-      detail: '启动时需要的 node/nginx 等基础镜像没有拉取成功，所以前端镜像没法构建。',
-      prompt: '根据当前启动失败日志，检查 frontend Dockerfile 和 docker-compose.yml，尽量复用现有镜像或调整启动方案，修复前端构建失败后重新启动项目。',
+      detail: '启动时需要的 node/python 等基础镜像没有拉取成功。',
+      prompt: '基础镜像拉取失败通常是网络问题,请检查 Docker 的网络与镜像加速器配置,恢复后直接重新点击启动项目即可。',
     }
   }
 
   if (combined.includes('address already in use') || combined.includes('port is already allocated')) {
     return {
       title: '端口冲突',
-      detail: '当前项目要占用的端口已经被其他服务占用了。',
-      prompt: '根据当前启动失败日志，检查 docker-compose.yml 里的端口映射，修复端口冲突并重新启动项目。',
+      detail: '平台已经自动尝试换端口重试,但分配到的端口仍被其他程序占用。',
+      prompt: '请检查本机是否有其他程序占用了 8000-8999 区间的端口(可用 lsof -i :端口 查看),清理后重新点击启动项目,平台会自动选择空闲端口。',
     }
   }
 
   if (failureReason === 'python_dependency_network_failure') {
     return {
       title: '后端 Python 依赖网络失败',
-      detail: '后端镜像构建过程中，Python 依赖下载失败。',
-      prompt: '根据当前启动失败日志，检查 backend 构建方式和依赖安装逻辑，修复 Python 依赖安装失败并重新启动项目。',
+      detail: '后端镜像构建过程中,Python 依赖下载失败。',
+      prompt: `根据当前启动失败日志,检查 backend/requirements.txt 的依赖清单,去掉不存在或过老的固定版本号后重新启动项目。${platformDeployNote}`,
     }
   }
 
   if (failureReason === 'docker_registry_failure') {
     return {
       title: 'Docker 仓库访问失败',
-      detail: '构建时访问 Docker Registry 失败，镜像没有拉下来。',
-      prompt: '根据当前启动失败日志，检查 frontend/backend 的 Dockerfile 和 docker-compose.yml，修复镜像拉取或复用方案后重新启动项目。',
+      detail: '构建时访问 Docker Registry 失败,镜像没有拉下来。',
+      prompt: '请检查 Docker 的网络与镜像加速器配置,恢复后直接重新点击启动项目即可。',
     }
   }
 
   if (failureReason === 'docker_daemon_unavailable') {
     return {
       title: 'Docker 没有启动',
-      detail: '当前不是生成代码本身崩了，而是本机 Docker 服务没有运行，`docker compose` 无法连接 daemon。',
-      prompt: `Docker 恢复后，请检查当前 project 的 docker-compose.yml、frontend Dockerfile 和 backend Dockerfile，确认前端 ${previewUrl} 与后端 ${backendUrl} 的端口和启动命令正确，再重新启动项目。`,
+      detail: '当前不是生成代码本身崩了,而是本机 Docker 服务没有运行,`docker compose` 无法连接 daemon。',
+      prompt: `Docker 恢复后,请直接重新点击启动项目即可。项目地址应为 ${backendUrl}。`,
     }
   }
 
   if (failureReason === 'services_not_running') {
     return {
       title: '容器没有真正跑起来',
-      detail: `docker compose 已执行，但容器状态异常。当前状态：${serviceStateSummary}`,
-      prompt: `根据当前启动失败日志和容器状态，检查 project 里的 docker-compose.yml、Dockerfile 与启动命令，修复未正常运行的服务后重新启动项目。前端应为 ${previewUrl}，后端应为 ${backendUrl}。`,
+      detail: `docker compose 已执行,但容器状态异常。当前状态:${serviceStateSummary}`,
+      prompt: `根据当前启动失败日志,重点检查 backend/main.py 是否定义了名为 app 的 FastAPI 实例、requirements.txt 是否完整,以及 frontend 是否能正常 build。修复源码后重新启动项目。项目地址应为 ${backendUrl}。${platformDeployNote}`,
     }
   }
 
   if (failureReason === 'backend_unreachable') {
     return {
-      title: '后端接口没有启动成功',
-      detail: `容器可能已经创建，但 ${backendUrl}/api/health 无法访问，说明项目自己的后端没有真正起来。`,
-      prompt: `根据当前启动失败日志，重点检查 backend 目录、后端启动命令、端口映射和 /api/health，修复后端不可达问题后重新启动项目。后端目标地址应为 ${backendUrl}。`,
+      title: '项目服务没有启动成功',
+      detail: `容器可能已经创建,但 ${backendUrl} 无法访问,说明项目自己的后端没有真正起来(前端由后端同端口托管)。`,
+      prompt: `根据当前启动失败日志,重点检查 backend/main.py 是否定义了名为 app 的 FastAPI 实例、依赖是否齐全、frontend 构建产物是否正常,修复后重新启动项目。项目地址应为 ${backendUrl}。${platformDeployNote}`,
     }
   }
 
   if (failureReason === 'frontend_unreachable') {
     return {
       title: '前端页面没有启动成功',
-      detail: `后端可能已经起来，但前端预览地址 ${previewUrl} 无法访问，说明项目自己的前端没有真正起来。`,
-      prompt: `根据当前启动失败日志，重点检查 frontend 目录、前端构建与运行命令、Dockerfile 和端口映射，修复前端不可达问题后重新启动项目。前端目标地址应为 ${previewUrl}。`,
+      detail: `后端可能已经起来,但预览地址 ${backendUrl} 无法访问。当前架构下前端由后端同端口托管,请检查前端构建产物。`,
+      prompt: `根据当前启动失败日志,重点检查 frontend 目录的 package.json 与构建脚本,确保 npm run build 能产出 dist/。${platformDeployNote}`,
     }
   }
 
   return {
     title: '项目启动失败',
-    detail: '启动命令执行失败，具体错误见下方日志。',
-    prompt: '根据当前启动失败日志，检查现有 project 文件并修复启动问题，然后重新启动项目。',
+    detail: '启动命令执行失败,具体错误见下方日志。',
+    prompt: `根据当前启动失败日志,检查现有 project 的 frontend/ 与 backend/ 源码并修复启动问题,然后重新启动项目。${platformDeployNote}`,
   }
 }
 
@@ -124,15 +126,31 @@ export function PreviewPanel({
 }) {
   const project = projects.find((item) => item.session_id === session?.id)
   const runtimeStatus = project?.runtime_status || 'idle'
-  const previewUrl = getProjectPreviewUrl(project, session)
+  // 只有项目确实在运行时才挂 iframe:未启动/已停止时不展示死链接的错误页
+  const isLive = runtimeStatus === 'running'
+  const livePreviewUrl = isLive ? getProjectPreviewUrl(project, session) : ''
+  // 启动后真实分配过的地址(不用未启动时的占位地址)
+  const recordedUrl = getProjectPreviewUrl(project, null)
+  const displayUrl = livePreviewUrl || recordedUrl
   const backendUrl = getProjectBackendUrl(project, session)
+  // started_at 每次启动都会更新:作为 key 强制 iframe 重新加载,
+  // 否则 src 不变时浏览器会一直停留在旧的错误页上
+  const previewKey = `${livePreviewUrl}#${project?.started_at || ''}`
+  const previewBoxRef = useRef(null)
+
+  useEffect(() => {
+    if (livePreviewUrl && previewBoxRef.current) {
+      previewBoxRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }
+  }, [previewKey, livePreviewUrl])
+
   const hasFailedStart = Boolean(
     showFailureAnalysis &&
       project?.started_at &&
       runtimeStatus === 'failed' &&
       (project?.stdout || project?.stderr || project?.compose_ps || project?.compose_logs),
   )
-  const failureDetail = hasFailedStart ? buildFailureDetail({ ...project, preview_url: previewUrl, backend_url: backendUrl }) : null
+  const failureDetail = hasFailedStart ? buildFailureDetail({ ...project, preview_url: displayUrl, backend_url: backendUrl }) : null
 
   return (
     <section className="flex h-auto flex-col border-t border-white/10 bg-black/20 lg:h-full lg:border-l lg:border-t-0">
@@ -181,8 +199,7 @@ export function PreviewPanel({
           <div className="mt-3 text-sm text-fog">
             <div>会话：{session?.title || '-'}</div>
             <div>目录：{project?.path || `project/${session?.project_slug || ''}`}</div>
-            <div>前端预览：{previewUrl || '未启动'}</div>
-            <div>后端接口：{backendUrl || '未识别'}</div>
+            <div>访问地址：{displayUrl || '未启动'}(前端由后端同端口托管)</div>
             <div>运行状态：{runtimeStatus}</div>
             <div>本地记录：`backend/data/sessions/*.json` 与 `backend/data/logs/*.jsonl`</div>
           </div>
@@ -196,9 +213,9 @@ export function PreviewPanel({
               <Play size={16} />
               {startingProject ? '启动中...' : '启动项目'}
             </button>
-            {previewUrl ? (
+            {livePreviewUrl ? (
               <a
-                href={previewUrl}
+                href={livePreviewUrl}
                 target="_blank"
                 rel="noreferrer"
                 className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-fog"
@@ -210,20 +227,26 @@ export function PreviewPanel({
           </div>
         </div>
 
-        <div className="mt-4 overflow-hidden rounded-3xl border border-white/10 bg-stone-950">
-          {previewUrl ? (
+        <div ref={previewBoxRef} className="mt-4 overflow-hidden rounded-3xl border border-white/10 bg-stone-950">
+          {livePreviewUrl ? (
             <>
               <div className="flex items-center justify-between border-b border-white/10 px-4 py-3 text-xs text-fog">
-                <span>{previewUrl}</span>
-                <a href={previewUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1">
+                <span>{livePreviewUrl}</span>
+                <a href={livePreviewUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1">
                   <ExternalLink size={14} />
                   打开
                 </a>
               </div>
-              <iframe title="preview" src={previewUrl} className="h-[520px] w-full bg-white" />
+              <iframe key={previewKey} title="preview" src={livePreviewUrl} className="h-[520px] w-full bg-white" />
             </>
           ) : (
-            <div className="p-6 text-sm text-fog/70">项目启动后会在这里预览</div>
+            <div className="p-6 text-sm text-fog/70">
+              {startingProject
+                ? '项目正在启动，启动成功后这里会自动显示预览。'
+                : project
+                  ? `项目当前未运行（状态：${runtimeStatus}），点击「启动项目」后这里会显示预览。`
+                  : '项目启动后会在这里预览'}
+            </div>
           )}
         </div>
 

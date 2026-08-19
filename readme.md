@@ -25,10 +25,10 @@ DeepWisdom 是一个 AI Agent 控制台系统。用户在主界面输入产品�
 ## 核心能力
 
 - 🧠 **AI Agent 驱动** — 基于 OpenAI 兼容接口，Agent 自动规划执行计划并调用受限工具（`list`、`read`、`mkdir`、`write`）生成项目文件
-- 📦 **按会话生成项目** — 每个会话对应一个独立项目目录 `project/projectN/`，含 frontend、backend、Dockerfile、docker-compose.yml
+- 📦 **按会话生成项目** — 每个会话对应一个独立项目目录 `project/projectN/`，Agent 只写 frontend、backend 源码；Dockerfile、docker-compose.yml 由平台自动生成
 - 🔄 **流式步骤追踪** — Agent 的 thinking、step、tool 调用和结果通过 SSE 实时推送到前端工作台
 - 🖥️ **工作台三栏布局** — 左侧会话列表、中间 Agent 流程与对话、右侧项目预览与启动状态
-- 🐳 **Docker 一键启动** — 支持 compose 启动、容器状态探测、前端 URL 检查和后端健康检查
+- 🐳 **Docker 一键启动** — 单容器部署：前端 build 产物由后端同端口托管，只需访问一个端口；端口自动分配，绝不与已有端口冲突
 - 🔧 **失败分析与修复** — 启动失败时展示具体错误日志，并提供一键回填修复提示词
 - 📋 **本地持久化** — 会话、步骤、日志、项目元信息全部以 JSON/JSONL 格式存储在 `backend/data/`
 
@@ -160,6 +160,9 @@ http://localhost:8000
 | `BACKEND_HOST` | 主控后端监听地址 | `0.0.0.0` |
 | `BACKEND_PORT` | 主控后端端口 | `8000` |
 | `FRONTEND_PORT` | 主控前端端口 | `5173` |
+| `NPM_REGISTRY` | 生成项目构建前端使用的 npm 镜像源（`off` 表示官方源） | `https://registry.npmmirror.com` |
+| `PIP_INDEX_URL` | 生成项目构建后端使用的 pip 镜像源（`off` 表示官方源） | `https://mirrors.aliyun.com/pypi/simple/` |
+| `PIP_TRUSTED_HOST` | pip 镜像源对应的 trusted host | `mirrors.aliyun.com` |
 
 ## API 接口
 
@@ -178,13 +181,20 @@ http://localhost:8000
 
 ## 生成项目端口规划
 
-每个生成的项目使用独立端口，避免与主控冲突：
+每个生成的项目采用**单容器、单端口**部署：
 
-| 项目 | 前端预览端口 | 后端 API 端口 |
-|------|-------------|--------------|
-| project1 | 3001 | 8001 |
-| project2 | 3002 | 8002 |
-| projectN | 300N | 800N |
+- 前端在 Docker 构建阶段 `npm run build`，产物由后端 FastAPI 同端口静态托管；
+- 浏览器只需访问后端端口，前端与 API 同源，不再需要单独的前端端口；
+- 宿主端口由平台**自动分配**：先收集所有已占用端口（Docker 已发布端口、其他项目已分配端口、主控端口），再从 `8000 + 项目序号` 起自增挑选空闲端口，绝不复用；
+- 端口冲突时启动流程会自动换端口重试。
+
+| 项目 | 访问端口（前端 = 后端） |
+|------|------------------------|
+| project1 | 8001 |
+| project2 | 8002 |
+| projectN | 800N（被占用时自动顺延） |
+
+> 旧项目目录里遗留的 `Dockerfile` / `docker-compose.yml` 会在每次启动时被平台覆盖为规范版本，无需手动清理。
 
 ## 安全限制
 
