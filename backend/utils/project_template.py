@@ -149,6 +149,24 @@ if app is None:
         return {"ok": False, "detail": _detail}
 
 
+# 旧项目可能自己写过"托管前端"的兜底路由(如 /{full_path:path} 去找旧的构建目录)。
+# 这类路由注册在前,会优先于平台的静态托管命中,导致首页返回项目自己的 404
+# (典型症状:容器在跑、健康检查通过,页面却是 {"detail":"Frontend build not found"})。
+# 静态资源现在统一由平台托管,把这类兜底路由摘掉。
+def _dw_is_catch_all(route):
+    path = getattr(route, "path", "") or getattr(route, "path_format", "") or ""
+    if ":path}" in path:
+        return True
+    if route.__class__.__name__ == "Mount" and path in ("", "/"):
+        return True
+    return False
+
+try:
+    app.routes[:] = [route for route in getattr(app, "routes", []) if not _dw_is_catch_all(route)]
+except Exception:  # noqa: BLE001
+    pass
+
+
 def _dw_has_route(path: str) -> bool:
     for _route in getattr(app, "routes", []):
         if getattr(_route, "path", None) == path:
