@@ -240,12 +240,17 @@ def get_config():
 def serve_frontend(full_path: str):
     if not FRONTEND_DIST_DIR.exists():
         raise HTTPException(status_code=404, detail="Frontend build not found")
+    # index.html 绝不能被浏览器缓存:否则每次重新部署后,
+    # 用户浏览器会一直用旧版前端(表现为新加的按钮点了没反应等)。
+    # 带内容哈希的 JS/CSS 资源可以长期缓存。
+    no_cache = {"Cache-Control": "no-cache"}
     requested = FRONTEND_DIST_DIR / full_path
     if full_path and requested.is_file():
-        return FileResponse(requested)
+        headers = no_cache if requested.name == "index.html" else None
+        return FileResponse(requested, headers=headers)
     index_file = FRONTEND_DIST_DIR / "index.html"
     if index_file.exists():
-        return FileResponse(index_file)
+        return FileResponse(index_file, headers=no_cache)
     raise HTTPException(status_code=404, detail="Frontend build not found")
 
 
