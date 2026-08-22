@@ -750,3 +750,5 @@
 {"ts": "2026-08-19T13:48:27.354526", "scope": "system", "channel": "api", "event": "request_started", "payload": {"method": "GET", "path": "/api/projects", "query": "", "client": "192.168.65.1"}}
 {"ts": "2026-08-19T13:48:27.388267", "scope": "system", "channel": "api", "event": "request_finished", "payload": {"method": "GET", "path": "/api/sessions", "query": "", "client": "192.168.65.1", "status_code": 200, "duration_ms": 35.15}}
 {"ts": "2026-08-19T13:48:27.426375", "scope": "system", "channel": "api", "event": "request_finished", "payload": {"method": "GET", "path": "/api/projects", "query": "", "client": "192.168.65.1", "status_code": 200, "duration_ms": 71.85}}
+{"ts": "2026-08-22T11:53:39.196310", "scope": "system", "channel": "api", "event": "request_started", "payload": {"method": "GET", "path": "/api/projects", "query": "", "client": "192.168.65.1"}}
+{"ts": "2026-08-22T11:53:39.548104", "scope": "system", "channel": "api", "event": "request_finished", "payload": {"method": "GET", "path": "/api/projects", "query": "", "client": "192.168.65.1", "status_code": 200, "duration_ms": 353.06}}

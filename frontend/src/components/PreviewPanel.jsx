@@ -20,7 +20,17 @@ function buildFailureDetail(project) {
   const platformDeployNote =
     'Dockerfile 与 docker-compose.yml 由平台自动生成和管理(单容器部署,前端 build 产物由后端同端口托管),不要让 Agent 修改部署文件,只需修复 frontend/ 与 backend/ 源码。'
 
-  if (combined.includes('npm run build') || combined.includes('npm ERR') || combined.includes('No such image')) {
+  // 注意:不能用 'npm run build' 作判断条件——每个成功构建的 compose 日志里
+  // 都包含 "RUN npm run build" 这一行,会导致所有失败都被误报成前端构建失败。
+  // 这里只匹配真正的构建失败信号。
+  if (
+    combined.includes('npm error') ||
+    combined.includes('npm ERR') ||
+    combined.includes('ELIFECYCLE') ||
+    combined.includes('Failed to compile') ||
+    combined.includes('error during build') ||
+    combined.includes('No such image')
+  ) {
     return {
       title: '前端构建失败',
       detail: '前端 build 阶段没有成功完成,常见原因是 package.json 依赖或构建脚本报错。',

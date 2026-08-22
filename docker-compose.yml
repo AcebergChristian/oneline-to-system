@@ -18,4 +18,8 @@ services:
       BACKEND_HOST: 0.0.0.0
       BACKEND_PORT: 8000
       DOCKER_HOST: unix:///var/run/docker.sock
+    extra_hosts:
+      # Linux 部署时 Docker 默认没有 host.docker.internal(Docker Desktop 才有),
+      # 加上 host-gateway 映射,主控容器才能探到宿主机上子项目的端口。
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped

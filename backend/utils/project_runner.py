@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import shutil
+import socket
 import subprocess
 import time
 from datetime import datetime
@@ -91,6 +92,27 @@ def _inside_container() -> bool:
         return "docker" in cgroup or "containerd" in cgroup
     except OSError:
         return False
+
+
+def _host_gateway_ip() -> str | None:
+    """读取容器默认网关地址(即宿主机侧的网关),作为健康检查的兜底候选。
+
+    Linux 部署时 Docker 默认没有 host.docker.internal(那是 Docker Desktop 才有),
+    即使部署方忘记在 compose 里加 `extra_hosts: host-gateway`,也能通过默认网关
+    探到宿主机上子项目发布的端口。/proc 不存在(macOS 等非容器环境)时返回 None。
+    """
+    try:
+        lines = Path("/proc/net/route").read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return None
+    for line in lines[1:]:
+        parts = line.split()
+        if len(parts) >= 3 and parts[1] == "00000000":
+            try:
+                return socket.inet_ntoa(bytes.fromhex(parts[2])[::-1])
+            except ValueError:
+                return None
+    return None
 
 
 def _public_url_for_port(port: int) -> str:
@@ -270,10 +292,22 @@ def _check_project_url(base_url: str) -> tuple[bool, str]:
 
 
 def _candidate_bases(host_port: int) -> list[str]:
-    """健康检查候选地址。主控在容器内时优先走 host.docker.internal。"""
+    """健康检查候选地址。
+
+    主控在容器内时:
+      1. host.docker.internal(Docker Desktop 提供;Linux 需配合
+         `extra_hosts: host-gateway` 才有,已在根 docker-compose.yml 配置);
+      2. 容器默认网关(宿主机侧)——Linux 上即使没有 host.docker.internal 也能通;
+      3. localhost(容器里指向自身,通常探不通,仅作最后兜底)。
+    """
     localhost = f"http://localhost:{host_port}"
     if _inside_container():
-        return [f"http://host.docker.internal:{host_port}", localhost]
+        bases = [f"http://host.docker.internal:{host_port}"]
+        gateway = _host_gateway_ip()
+        if gateway:
+            bases.append(f"http://{gateway}:{host_port}")
+        bases.append(localhost)
+        return bases
     return [localhost]
 
 
